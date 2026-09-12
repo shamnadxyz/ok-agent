@@ -1,0 +1,25 @@
+[project]
+name = "ok_agent"
+version = "0.0.1"
+authors = [
+  { name = "shamnadxyz", email = "shamnadxyz@proton.me" }
+]
+description = "A minimal cli coding agent without any external dependencies."
+readme = "README.md"
+requires-python = ">=3.13"
+
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3.13",
+]
+
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+
+[project.scripts]
+ok = "ok_agent.cli:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
