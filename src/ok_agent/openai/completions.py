@@ -136,7 +136,7 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
             reasoning_content.append(reasoning)
         elif previously_thinking:
             previously_thinking = False
-            print(RESET)
+            print(RESET, end="")
 
         if "content" in delta:
             output = delta.get("content") or ""
