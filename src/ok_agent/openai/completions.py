@@ -14,6 +14,7 @@ from ok_agent.openai.types import (
     MessageToolCall,
     ResponseResult,
 )
+from ok_agent.utils import decode_bytes
 
 trace = getLogger("llm.traces")
 logger = getLogger(__name__)
@@ -116,7 +117,7 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
     previously_thinking = False
 
     for line in response:
-        decoded_response = line.decode("utf-8").strip()
+        decoded_response = decode_bytes(line).strip()
         if decoded_response == "":
             continue
 

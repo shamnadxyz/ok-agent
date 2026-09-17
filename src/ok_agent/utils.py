@@ -8,6 +8,10 @@ from ok_agent.openai.types import ContentPartText, SystemMessage
 logger = getLogger(__name__)
 
 
+def decode_bytes(input: bytes) -> str:
+    return input.decode("utf-8", errors="ignore")
+
+
 def setup_history():
     histfile = Path.home() / ".ok_history"
     history_length = 1000

@@ -2,18 +2,33 @@ import subprocess
 
 from ok_agent.openai.types import FunctionTool
 from ok_agent.tools.types import Tool
+from ok_agent.utils import decode_bytes
 
 
-def _build_process_message(stdout: str, stderr: str, returncode: int) -> str:
-    if stderr:
-        message = f"<stdout>{stdout}</stdout>\n<stderr>\n{stderr}</stderr>"
-    else:
-        message = stdout
+def _build_process_message(
+    stdout: str | bytes | None,
+    stderr: str | bytes | None,
+    returncode: int | None = None,
+) -> str:
 
-    if returncode != 0:
-        message += f"\nExited with non-zero exit code: {returncode}"
+    messages = []
 
-    return message
+    if isinstance(stdout, bytes):
+        messages.append(decode_bytes(stdout))
+
+    if isinstance(stdout, str) and stdout:
+        messages.append(stdout)
+
+    if isinstance(stderr, bytes):
+        messages.append(f"<stderr>{decode_bytes(stderr)}</stderr>")
+
+    if isinstance(stderr, str) and stderr:
+        messages.append(f"<stderr>{stderr}</stderr>")
+
+    if returncode is not None and returncode != 0:
+        messages.append(f"exit code: {returncode}")
+
+    return "\n".join(messages)
 
 
 _shell_schema: FunctionTool = {
@@ -26,7 +41,11 @@ _shell_schema: FunctionTool = {
             "properties": {
                 "cmd": {
                     "type": "string",
-                    "description": "bash command to run",
+                    "description": "shell command to run",
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "command timeout (default: 10)",
                 },
                 "input": {
                     "type": ["string", "null"],
@@ -39,13 +58,16 @@ _shell_schema: FunctionTool = {
 }
 
 
-def execute_shell_command(cmd, input=None) -> str:
+def execute_shell_command(cmd, timeout=10, input=None) -> str:
     print(f"$ {cmd}")
 
     argument_errors = []
 
     if not isinstance(cmd, str):
         argument_errors.append(f"cmd: '{cmd}' should be a string")
+
+    if not isinstance(timeout, int):
+        argument_errors.append(f"timeout: '{timeout}' should be a number")
 
     if not isinstance(input, str) and input is not None:
         argument_errors.append(f"input: '{input}' should be a string or null")
@@ -59,6 +81,7 @@ def execute_shell_command(cmd, input=None) -> str:
             input=input,
             text=True,
             capture_output=True,
+            timeout=timeout,
             check=False,
         )
         return _build_process_message(
@@ -66,6 +89,13 @@ def execute_shell_command(cmd, input=None) -> str:
             stderr=result.stderr,
             returncode=result.returncode,
         )
+
+    except subprocess.TimeoutExpired as e:
+        return _build_process_message(
+            stdout=e.stdout,
+            stderr=e.stderr,
+        )
+
     except Exception as e:
         return f"Unable to execute command {cmd}: {type(e).__name__}\n{e}"
 
