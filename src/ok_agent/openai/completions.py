@@ -2,6 +2,7 @@ import json
 import urllib.error
 import urllib.request
 from collections.abc import Iterable
+from http import HTTPStatus
 from logging import getLogger
 
 from ok_agent.ansi_sequences import GREY, RED, RESET
@@ -201,10 +202,19 @@ def completion(
             return _handle_response(response)
 
     except urllib.error.HTTPError as e:
-        logger.exception(f"HTTP {e.status} on {request.full_url}")
-        print(f"{RED}HTTP {e.status} on {request.full_url}{RESET}")
+        reason = e.reason
+
+        match e.status:
+            case HTTPStatus.UNAUTHORIZED:
+                reason = "Unauthorized: invalid API key"
+
+        message = f"{request.method} {request.full_url} {reason}"
+        logger.exception(message)
+
+        print(f"{RED}{reason}{RESET}")
+
         return None
     except urllib.error.URLError as e:
         logger.exception(f"{request.method} {request.full_url}")
-        print(f"{RED}{request.method} {request.full_url} {e.reason} {RESET}")
+        print(f"{RED}{e.reason}{RESET}")
         return None
