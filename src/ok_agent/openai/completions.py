@@ -168,9 +168,9 @@ def completion(
     timeout: int = 300,
 ) -> ResponseResult | None:
     """Sends the list of messages to LLM server."""
-
     config = get_config()
     api_base_url = config["api_base_url"]
+    completions_endpoint = f"{api_base_url}/chat/completions"
 
     if model is None:
         model = config["model"]
@@ -187,8 +187,12 @@ def completion(
     logger.debug(f"Request data: {data}")
 
     request = urllib.request.Request(
-        f"{api_base_url}/v1/chat/completions", data=data, method="POST"
+        completions_endpoint, data=data, method="POST"
     )
+
+    api_key = config["api_key"]
+    if api_key is not None:
+        request.add_header("Authorization", f"Bearer {api_key}")
 
     logger.debug(f"Request URL: {request.full_url}")
 
