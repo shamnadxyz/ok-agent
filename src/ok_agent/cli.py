@@ -3,6 +3,7 @@ import readline
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BOLD, RESET
+from ok_agent.config import get_system_prompt
 from ok_agent.loggers import setup_logging
 from ok_agent.openai.completions import completion
 from ok_agent.openai.types import Message
@@ -11,7 +12,6 @@ from ok_agent.tools.read_tool import read_tool
 from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.utils import get_tools_schema, handle_tool_calls
 from ok_agent.tools.write_tool import write_tool
-from ok_agent.utils import get_system_prompt
 
 
 def init_readline():
