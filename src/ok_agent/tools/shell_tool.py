@@ -4,33 +4,6 @@ from ok_agent.openai.types import FunctionTool
 from ok_agent.tools.types import Tool
 from ok_agent.utils import decode_bytes
 
-
-def _build_process_message(
-    stdout: str | bytes | None,
-    stderr: str | bytes | None,
-    returncode: int | None = None,
-) -> str:
-
-    messages = []
-
-    if isinstance(stdout, bytes):
-        messages.append(decode_bytes(stdout))
-
-    if isinstance(stdout, str) and stdout:
-        messages.append(stdout)
-
-    if isinstance(stderr, bytes):
-        messages.append(f"<stderr>{decode_bytes(stderr)}</stderr>")
-
-    if isinstance(stderr, str) and stderr:
-        messages.append(f"<stderr>{stderr}</stderr>")
-
-    if returncode is not None and returncode != 0:
-        messages.append(f"exit code: {returncode}")
-
-    return "\n".join(messages)
-
-
 _shell_schema: FunctionTool = {
     "type": "function",
     "function": {
@@ -56,6 +29,32 @@ _shell_schema: FunctionTool = {
         "strict": True,
     },
 }
+
+
+def _build_process_message(
+    stdout: str | bytes | None,
+    stderr: str | bytes | None,
+    returncode: int | None = None,
+) -> str:
+
+    messages = []
+
+    if stdout:
+        if isinstance(stdout, bytes):
+            messages.append(decode_bytes(stdout))
+        elif isinstance(stdout, str):
+            messages.append(stdout)
+
+    if stderr:
+        if isinstance(stderr, bytes):
+            messages.append(f"<stderr>{decode_bytes(stderr)}</stderr>")
+        elif isinstance(stderr, str):
+            messages.append(f"<stderr>{stderr}</stderr>")
+
+    if returncode is not None and returncode != 0:
+        messages.append(f"exit code: {returncode}")
+
+    return "\n".join(messages)
 
 
 def execute_shell_command(cmd, timeout=10, input=None) -> str:
