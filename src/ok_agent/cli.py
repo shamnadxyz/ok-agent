@@ -1,3 +1,7 @@
+import atexit
+import readline
+from pathlib import Path
+
 from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.loggers import setup_logging
 from ok_agent.openai.completions import completion
@@ -7,7 +11,36 @@ from ok_agent.tools.read_tool import read_tool
 from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.utils import get_tools_schema, handle_tool_calls
 from ok_agent.tools.write_tool import write_tool
-from ok_agent.utils import get_system_prompt, setup_history
+from ok_agent.utils import get_system_prompt
+
+
+def init_readline():
+    home = Path.home()
+    histfile = home / ".ok_history"
+    history_length = 1000
+
+    readline.parse_and_bind(r"set completion-ignore-case on")
+    readline.parse_and_bind(r"set enable-bracketed-paste on")
+
+    readline.parse_and_bind(r"'\e[A': history-search-backward")
+    readline.parse_and_bind(r"'\e[B': history-search-forward")
+
+    readline.parse_and_bind(r"'\C-p': history-search-backward")
+    readline.parse_and_bind(r"'\C-n': history-search-forward")
+
+    try:
+        readline.read_history_file(histfile)
+        h_len = readline.get_current_history_length()
+    except FileNotFoundError:
+        histfile.touch()
+        h_len = 0
+
+    def save(prev_h_len, histfile):
+        new_h_len = readline.get_current_history_length()
+        readline.set_history_length(history_length)
+        readline.append_history_file(new_h_len - prev_h_len, histfile)
+
+    atexit.register(save, h_len, histfile)
 
 
 def cli():
@@ -53,7 +86,7 @@ def cli():
 
 def main():
     setup_logging()
-    setup_history()
+    init_readline()
     try:
         cli()
     except (EOFError, KeyboardInterrupt, SystemExit):
