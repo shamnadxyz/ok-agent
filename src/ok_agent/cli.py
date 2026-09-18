@@ -3,7 +3,7 @@ import readline
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BOLD, RESET
-from ok_agent.config import get_system_prompt
+from ok_agent.config import get_config, get_system_prompt
 from ok_agent.loggers import setup_logging
 from ok_agent.openai.completions import completion
 from ok_agent.openai.types import Message
@@ -15,9 +15,10 @@ from ok_agent.tools.write_tool import write_tool
 
 
 def init_readline():
+    config = get_config()
     home = Path.home()
     histfile = home / ".ok_history"
-    history_length = 1000
+    history_length = config["history_length"]
 
     readline.parse_and_bind(r"set completion-ignore-case on")
     readline.parse_and_bind(r"set enable-bracketed-paste on")
