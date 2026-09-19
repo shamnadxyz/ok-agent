@@ -11,6 +11,6 @@ A minimal cli coding agent that is built without any external dependencies.
 ## Alpha Release Milestone
 
 - [ ] Chat persistence
-- [ ] TUI
 - [ ] Compaction
+- [ ] Commands
 - [ ] Configuration file
