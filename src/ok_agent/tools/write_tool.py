@@ -8,17 +8,17 @@ _write_schema: FunctionTool = {
     "type": "function",
     "function": {
         "name": "write",
-        "description": "Write to a new file. If the parent dirs in path does not exist it is created. Overwriting is not supported.",
+        "description": "Write a new file. Parent dirs are created if missing. Cannot write over exising file.",
         "parameters": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "path of the file to create",
+                    "description": "path for the file",
                 },
                 "content": {
                     "type": "string",
-                    "description": "content to write to file",
+                    "description": "content to write",
                 },
             },
         },
