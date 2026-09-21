@@ -24,7 +24,7 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
         return "old_text does not have a match in the file"
 
     if count > 1:
-        return "old_text have more that one match in the file, it should be unique"
+        return "old_text must be unique"
 
     updated_content = file_content.replace(old_text, new_text, count=1)
 
