@@ -1,32 +1,11 @@
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
-from ok_agent.openai.types import FunctionTool
-from ok_agent.tools.types import Tool
-
-_read_schema: FunctionTool = {
-    "type": "function",
-    "function": {
-        "name": "read",
-        "description": "Read file",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "path of the file",
-                }
-            },
-        },
-        "strict": True,
-    },
-}
+from ok_agent.tools.types import ToolSchema
 
 
-def _read_tool(path) -> str:
+def read_file(path: str) -> str:
     print(f"{BLACK_BG}{BLUE_BRIGHT}Read {path}{RESET}")
-    if not isinstance(path, str):
-        return f"path {path} should be a string"
 
     file = Path(path)
 
@@ -39,12 +18,23 @@ def _read_tool(path) -> str:
             )
         else:
             return f"read: '{file.name}' no such file or directory"
-    except Exception as e:
-        return f"Unable read '{file.name}' : {type(e).__name__}"
+    except OSError as e:
+        return f"Failed to read '{file.name}' {type(e).__name__} {e}"
+    except TypeError as e:
+        return f"Type Error '{file.name}' {type(e).__name__} {e}"
 
 
-read_tool: Tool = {
-    "name": _read_schema["function"]["name"],
-    "schema": _read_schema,
-    "tool": _read_tool,
+read_tool: ToolSchema = {
+    "name": "read",
+    "description": "Read file",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "path of the file",
+            }
+        },
+    },
+    "function": read_file,
 }

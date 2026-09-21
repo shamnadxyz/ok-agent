@@ -90,7 +90,6 @@ def _parse_tool_stream(tool_calls: list[MessageToolCall], delta: dict) -> None:
                 "function": call,
             }
 
-            logger.debug(f"tool_call: {function}")
             tool_calls.insert(idx, function)
 
         if argument:

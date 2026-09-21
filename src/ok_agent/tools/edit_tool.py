@@ -2,51 +2,11 @@ import difflib
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
-from ok_agent.openai.types import FunctionTool
-from ok_agent.tools.types import Tool
-
-_edit_schema: FunctionTool = {
-    "type": "function",
-    "function": {
-        "name": "edit",
-        "description": "Edit an existing file.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "path of the file to edit",
-                },
-                "old_text": {
-                    "type": "string",
-                    "description": "exact unique text to be replace",
-                },
-                "new_text": {
-                    "type": "string",
-                    "description": "text to replace with",
-                },
-            },
-        },
-        "strict": True,
-    },
-}
+from ok_agent.tools.types import ToolSchema
 
 
-def _edit(path, old_text, new_text) -> str:
+def edit_file(path: str, old_text: str, new_text: str) -> str:
     print(f"{BLACK_BG}{BLUE_BRIGHT}Edit {path}{RESET}")
-    argument_errors = []
-
-    if not isinstance(path, str):
-        argument_errors.append(f"path: '{path}' should be a string")
-
-    if not isinstance(old_text, str):
-        argument_errors.append(f"old_text: '{old_text}' should be a string")
-
-    if not isinstance(new_text, str):
-        argument_errors.append(f"new_text: '{new_text}' should be a string")
-
-    if argument_errors:
-        return "\n".join(argument_errors)
 
     file = Path(path)
 
@@ -69,7 +29,7 @@ def _edit(path, old_text, new_text) -> str:
     updated_content = file_content.replace(old_text, new_text, count=1)
 
     try:
-        file.write_text(updated_content)
+        file.write_text(updated_content, encoding="utf-8")
         return "".join(
             difflib.unified_diff(
                 file_content.splitlines(keepends=True),
@@ -77,12 +37,34 @@ def _edit(path, old_text, new_text) -> str:
             )
         )
 
-    except Exception as e:
-        return f"Unable edit the file '{file.name}' : {type(e).__name__}: {e}"
+    except OSError as e:
+        return (
+            f"Failed to edit the file '{file.name}' : {type(e).__name__}: {e}"
+        )
+    except TypeError as e:
+        return f"Type Error: {type(e).__name__}: {e}"
 
 
-edit_tool: Tool = {
-    "name": _edit_schema["function"]["name"],
-    "schema": _edit_schema,
-    "tool": _edit,
+edit_tool: ToolSchema = {
+    "name": "edit",
+    "description": "Edit a file",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "path of file",
+            },
+            "old_text": {
+                "type": "string",
+                "description": "unique text to be replaced",
+            },
+            "new_text": {
+                "type": "string",
+                "description": "text to replace with",
+            },
+        },
+    },
+    "strict": True,
+    "function": edit_file,
 }

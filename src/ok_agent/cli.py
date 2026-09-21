@@ -6,12 +6,9 @@ from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.config import get_config, get_system_prompt
 from ok_agent.loggers import setup_logging
 from ok_agent.openai.completions import completion
+from ok_agent.openai.tools import handle_tool_call, tool_to_function_tool
 from ok_agent.openai.types import Message
-from ok_agent.tools.edit_tool import edit_tool
-from ok_agent.tools.read_tool import read_tool
-from ok_agent.tools.shell_tool import shell_tool
-from ok_agent.tools.utils import get_tools_schema, handle_tool_calls
-from ok_agent.tools.write_tool import write_tool
+from ok_agent.tools.registry import create_registry, get_tools
 
 
 def init_readline():
@@ -47,9 +44,9 @@ def init_readline():
 def cli():
     messages: list[Message] = [get_system_prompt()]
 
-    tool_schemas, tools = get_tools_schema(
-        [shell_tool, read_tool, write_tool, edit_tool]
-    )
+    tools = get_tools()
+    tool_registry = create_registry(tools)
+    function_tools = [tool_to_function_tool(tool) for tool in tools]
 
     print(f"{BOLD}Ok Agent{RESET}")
 
@@ -64,24 +61,29 @@ def cli():
 
         while True:
             result = completion(
-                messages=messages, tools=tool_schemas, model="qwen3.6-35b-a3b"
+                messages=messages,
+                tools=function_tools,
+                model="qwen3.6-35b-a3b",
             )
             # TODO: add stop reason handling
 
             if result is None:
                 break
 
-            assitant_message: Message = {
+            assistant_message: Message = {
                 "role": "assistant",
                 **result,
             }
 
-            messages.append(assitant_message)
+            messages.append(assistant_message)
 
             if "tool_calls" not in result:
                 break
 
-            tool_results = handle_tool_calls(tools, result["tool_calls"])
+            tool_results = [
+                handle_tool_call(tool_registry, tool_call)
+                for tool_call in result["tool_calls"]
+            ]
             messages.extend(tool_results)
 
 

@@ -1,5 +1,7 @@
 from typing import Literal, NotRequired, TypedDict
 
+from ok_agent.tools.types import JSONSchema
+
 Role = Literal["user", "tool", "assistant", "system"]
 
 
@@ -22,12 +24,12 @@ class FunctionDefinition(TypedDict):
 
     name: str
     description: NotRequired[str]
-    parameters: NotRequired[dict]
+    parameters: NotRequired[JSONSchema]
     strict: NotRequired[bool | None]
 
 
 class FunctionTool(TypedDict):
-    """Tool that can be used to generate a response sent to the LLM."""
+    """Tool sent to the LLM."""
 
     type: ToolType
     function: FunctionDefinition
