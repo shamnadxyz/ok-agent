@@ -40,10 +40,6 @@ def get_system_prompt() -> SystemMessage:
             "type": "text",
             "text": "You are a coding agent inside the Ok agent harness. Your focus is on minimalism in everything.",
         },
-        {
-            "type": "text",
-            "text": "Currently the harness doesn't support markdown, responding in markdown is strictly forbidden, use only plain text format.",
-        },
     ]
 
     if agents.exists():
