@@ -3,8 +3,6 @@ from logging import getLogger
 from pathlib import Path
 from typing import TypedDict
 
-from ok_agent.openai.types import ContentPartText, SystemMessage
-
 logger = getLogger(__name__)
 
 
@@ -22,31 +20,16 @@ def _get_base_url():
     ).removesuffix("/")
 
 
+def _get_logs_path():
+    home = Path.home()
+    return home / ".local/state/ok-agent"
+
+
 def get_config() -> Config:
     return {
         "model": os.getenv("MODEL", "qwen3.6-35b-a3b"),
         "api_base_url": _get_base_url(),
         "api_key": os.getenv("OPENAI_API_KEY"),
         "history_length": 1000,
-        "logs_path": "/var/tmp/ok-agent",
+        "logs_path": _get_logs_path(),
     }
-
-
-def get_system_prompt() -> SystemMessage:
-    agents = Path("AGENTS.md")
-
-    system_message: list[ContentPartText] = [
-        {
-            "type": "text",
-            "text": "You are a coding agent inside the Ok agent harness. Your focus is on minimalism in everything.",
-        },
-    ]
-
-    if agents.exists():
-        try:
-            content = agents.read_text()
-            system_message.append({"type": "text", "text": content})
-        except (OSError, ValueError):
-            logger.exception("Error in reading AGENTS.md file")
-
-    return {"role": "system", "content": system_message}
