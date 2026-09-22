@@ -63,12 +63,10 @@ def _validate_object(data: dict, schema: JSONSchema) -> str | None:
 
     required_arguments = schema.get("required", [])
 
-    missing_arguments = [
-        argument for argument in required_arguments if argument not in data
-    ]
+    error_message = _check_arguments(required_arguments, data)
 
-    if missing_arguments:
-        return "Missing required arguments: " + ", ".join(missing_arguments)
+    if error_message:
+        return error_message
 
     validation_fails = []
     for property, property_schema in properties.items():
@@ -109,12 +107,10 @@ def validate_tool(
         [property for property, _ in properties.items()] if strict else []
     )
 
-    missing_arguments = [
-        argument for argument in required_arguments if argument not in data
-    ]
+    error_message = _check_arguments(required_arguments, data)
 
-    if missing_arguments:
-        return "Missing required arguments: " + ", ".join(missing_arguments)
+    if error_message:
+        return error_message
 
     return _validate_object(data, schema)
 
