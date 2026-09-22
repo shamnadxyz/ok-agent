@@ -29,7 +29,7 @@ def write_file(path: str, content: str) -> str:
 
 write_tool: ToolSchema = {
     "name": "write",
-    "description": "Write a new file. Parent dirs are created if missing. Cannot write over exising file.",
+    "description": "Write a new file. Parent dirs are created if missing. Cannot write over existing file.",
     "parameters": {
         "type": "object",
         "properties": {
