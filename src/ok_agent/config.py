@@ -11,7 +11,8 @@ class Config(TypedDict):
     api_base_url: str
     api_key: str | None
     history_length: int
-    logs_path: str
+    state_dir: Path
+    data_dir: Path
 
 
 def _get_base_url():
@@ -20,7 +21,12 @@ def _get_base_url():
     ).removesuffix("/")
 
 
-def _get_logs_path():
+def _get_data_dir():
+    home = Path.home()
+    return home / ".local/share/ok-agent"
+
+
+def _get_state_dir() -> Path:
     home = Path.home()
     return home / ".local/state/ok-agent"
 
@@ -31,5 +37,6 @@ def get_config() -> Config:
         "api_base_url": _get_base_url(),
         "api_key": os.getenv("OPENAI_API_KEY"),
         "history_length": 1000,
-        "logs_path": _get_logs_path(),
+        "state_dir": _get_state_dir(),
+        "data_dir": _get_data_dir(),
     }

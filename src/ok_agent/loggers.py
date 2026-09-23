@@ -1,7 +1,6 @@
 import logging
 from logging import Logger, getLogger
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 from ok_agent.config import get_config
 
@@ -15,7 +14,7 @@ def _create_rotating_logger(
     propagate: bool = True,
 ) -> Logger:
     config = get_config()
-    logs_path = Path(config["logs_path"])
+    logs_path = config["state_dir"] / "logs"
 
     logs_path.mkdir(exist_ok=True)
 
