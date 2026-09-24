@@ -1,5 +1,7 @@
 import atexit
 import readline
+from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BOLD, RESET
@@ -8,8 +10,53 @@ from ok_agent.loggers import setup_logging
 from ok_agent.openai.completions import completion
 from ok_agent.openai.tools import handle_tool_call, tool_to_function_tool
 from ok_agent.openai.types import Message
+from ok_agent.openai.utils import get_models
 from ok_agent.tools.registry import create_registry, get_tools
 from ok_agent.utils import get_system_prompt
+
+logger = getLogger(__name__)
+
+
+@dataclass
+class AppState:
+    model: str
+    context_window: int
+    context_usage: int
+    models: list[str]
+    messages: list[Message]
+
+
+def get_model_completions(state: AppState) -> list[str]:
+    if not state.models:
+        state.models = get_models()
+
+    return [f"/model {model}" for model in state.models]
+
+
+def init_completions(state: AppState):
+    app_state = state
+
+    commands = ["/model"]
+
+    def complete(text: str, state: int) -> str | None:
+        if text == "":
+            return None
+
+        if text.startswith("/model") and not app_state.models:
+            commands.extend(get_model_completions(app_state))
+
+        completions = [
+            command for command in commands if command.startswith(text)
+        ]
+
+        if state < len(completions):
+            return completions[state]
+        else:
+            return None
+
+    readline.parse_and_bind("tab: complete")
+    readline.set_completer(complete)
+    readline.set_completer_delims("")
 
 
 def init_readline():
@@ -42,8 +89,35 @@ def init_readline():
     atexit.register(save, h_len, histfile)
 
 
+def handle_model_command(state: AppState, query: str):
+    if not state.models:
+        state.models = get_models()
+
+    selected_model = query.removeprefix("/model").strip()
+
+    if selected_model == "":
+        print("Please pass the model id")
+        return
+
+    if selected_model not in state.models or state.model == selected_model:
+        print(f"model '{selected_model}' not found")
+        return
+
+    state.model = selected_model
+    print(f"Selected model: {selected_model}")
+
+
 def cli():
-    messages: list[Message] = [get_system_prompt()]
+    state = AppState(
+        model="",
+        context_usage=0,
+        context_window=0,
+        messages=[get_system_prompt()],
+        models=[],
+    )
+
+    init_readline()
+    init_completions(state)
 
     tools = get_tools()
     tool_registry = create_registry(tools)
@@ -52,19 +126,23 @@ def cli():
     print(f"{BOLD}Ok Agent{RESET}")
 
     while True:
-        query = input("\n> ")
+        query = input("\n> ").strip()
 
         if query.lower() == "exit":
             raise SystemExit
 
+        if query.startswith("/model"):
+            handle_model_command(state, query)
+            continue
+
         user_message: Message = {"role": "user", "content": query}
-        messages.append(user_message)
+        state.messages.append(user_message)
 
         while True:
             result = completion(
-                messages=messages,
+                messages=state.messages,
                 tools=function_tools,
-                model="qwen3.6-35b-a3b",
+                model=state.model,
             )
             # TODO: add stop reason handling
 
@@ -76,7 +154,7 @@ def cli():
                 **result,
             }
 
-            messages.append(assistant_message)
+            state.messages.append(assistant_message)
 
             if "tool_calls" not in result:
                 break
@@ -85,12 +163,11 @@ def cli():
                 handle_tool_call(tool_registry, tool_call)
                 for tool_call in result["tool_calls"]
             ]
-            messages.extend(tool_results)
+            state.messages.extend(tool_results)
 
 
 def main():
     setup_logging()
-    init_readline()
     try:
         cli()
     except (EOFError, KeyboardInterrupt, SystemExit):

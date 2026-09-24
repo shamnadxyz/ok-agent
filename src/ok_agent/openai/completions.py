@@ -2,11 +2,9 @@ import json
 import urllib.error
 import urllib.request
 from collections.abc import Iterable
-from http import HTTPStatus
 from logging import getLogger
 
-from ok_agent.ansi_sequences import GREY, RED, RESET
-from ok_agent.config import get_config
+from ok_agent.ansi_sequences import GREY, RESET
 from ok_agent.openai.types import (
     Function,
     FunctionTool,
@@ -14,6 +12,7 @@ from ok_agent.openai.types import (
     MessageToolCall,
     ResponseResult,
 )
+from ok_agent.openai.utils import build_request, get_error_message
 from ok_agent.utils import decode_bytes
 
 trace = getLogger("llm.traces")
@@ -100,8 +99,7 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
     """Parses the LLM response and prints it.
 
     Parses the SSE byte streaming response from the LLM server then prints the
-    reasoning content between think tags in grey color and prints the output
-    in normal color.
+    reasoning content in gray color and prints the output without color.
 
     Args:
       response: byte stream
@@ -112,8 +110,6 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
     reasoning_content: list[str] = []
     content: list[str] = []
     tool_calls: list[MessageToolCall] = []
-
-    previously_thinking = False
 
     for line in response:
         decoded_response = decode_bytes(line).strip()
@@ -128,16 +124,9 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
             _parse_tool_stream(tool_calls, delta)
 
         if "reasoning_content" in delta:
-            if not previously_thinking:
-                print(GREY, end="")
-                previously_thinking = True
-
             reasoning = delta.get("reasoning_content") or ""
-            print(reasoning, end="", flush=True)
+            print(f"{GREY}{reasoning}{RESET}", end="", flush=True)
             reasoning_content.append(reasoning)
-        elif previously_thinking:
-            previously_thinking = False
-            print(RESET, end="")
 
         if "content" in delta:
             output = delta.get("content") or ""
@@ -169,12 +158,7 @@ def completion(
     timeout: int = 300,
 ) -> ResponseResult | None:
     """Sends the list of messages to LLM server."""
-    config = get_config()
-    api_base_url = config["api_base_url"]
-    completions_endpoint = f"{api_base_url}/chat/completions"
-
-    if model is None:
-        model = config["model"]
+    completions_endpoint = "/chat/completions"
 
     data = json.dumps(
         {
@@ -187,34 +171,23 @@ def completion(
 
     logger.debug(f"Request data: {data}")
 
-    request = urllib.request.Request(
-        completions_endpoint, data=data, method="POST"
-    )
-
-    api_key = config["api_key"]
-    if api_key is not None:
-        request.add_header("Authorization", f"Bearer {api_key}")
-
-    logger.debug(f"Request URL: {request.full_url}")
-
+    request = build_request(completions_endpoint, data, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return _handle_response(response)
 
     except urllib.error.HTTPError as e:
-        reason = e.reason
+        message = e.reason
+        error_message = get_error_message(e)
 
-        match e.status:
-            case HTTPStatus.UNAUTHORIZED:
-                reason = "Unauthorized: invalid API key"
+        if error_message is not None:
+            message = error_message
 
-        message = f"{request.method} {request.full_url} {reason}"
         logger.exception(message)
-
-        print(f"{RED}{reason}{RESET}")
+        print(message)
 
         return None
     except urllib.error.URLError as e:
-        logger.exception(f"{request.method} {request.full_url}")
-        print(f"{RED}{e.reason}{RESET}")
+        logger.exception(e.reason)
+        print(e.reason)
         return None
