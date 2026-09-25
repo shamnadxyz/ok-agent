@@ -108,11 +108,12 @@ def handle_model_command(state: AppState, query: str):
 
 
 def cli():
+    initial_prompt = get_system_prompt()
     state = AppState(
         model="",
         context_usage=0,
         context_window=0,
-        messages=[get_system_prompt()],
+        messages=[initial_prompt],
         models=[],
     )
 
@@ -138,6 +139,11 @@ def cli():
         user_message: Message = {"role": "user", "content": query}
         state.messages.append(user_message)
 
+        if not state.model:
+            print("Please select a model with /model command")
+            state.messages = [initial_prompt]
+            continue
+
         while True:
             result = completion(
                 messages=state.messages,
@@ -149,21 +155,26 @@ def cli():
             if result is None:
                 break
 
-            assistant_message: Message = {
-                "role": "assistant",
-                **result,
-            }
+            assistant_message: Message = {"role": "assistant", **result}
 
-            state.messages.append(assistant_message)
-
-            if "tool_calls" not in result:
+            if (
+                "content" in assistant_message
+                or "tool_calls" in assistant_message
+            ):
+                state.messages.append(assistant_message)
+            else:
+                print("The model did not produce any response")
                 break
 
-            tool_results = [
-                handle_tool_call(tool_registry, tool_call)
-                for tool_call in result["tool_calls"]
-            ]
-            state.messages.extend(tool_results)
+            if "tool_calls" in assistant_message:
+                tool_results = [
+                    handle_tool_call(tool_registry, tool_call)
+                    for tool_call in result["tool_calls"]
+                ]
+
+                state.messages.extend(tool_results)
+            else:
+                break
 
 
 def main():
