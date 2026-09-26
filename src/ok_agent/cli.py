@@ -37,20 +37,25 @@ def init_completions(state: AppState):
     app_state = state
 
     commands = ["/model"]
+    model_completions = []
 
     def complete(text: str, state: int) -> str | None:
+        completions = commands
         if text == "":
             return None
 
-        if text.startswith("/model") and not app_state.models:
-            commands.extend(get_model_completions(app_state))
+        if text.startswith("/model"):
+            if not model_completions:
+                model_completions.extend(get_model_completions(app_state))
 
-        completions = [
-            command for command in commands if command.startswith(text)
+            completions = model_completions
+
+        candidates = [
+            command for command in completions if command.startswith(text)
         ]
 
-        if state < len(completions):
-            return completions[state]
+        if state < len(candidates):
+            return candidates[state]
         else:
             return None
 
