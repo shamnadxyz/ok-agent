@@ -6,11 +6,11 @@ from pathlib import Path
 
 from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.config import get_config
+from ok_agent.llama_cpp.completions import completion
+from ok_agent.llama_cpp.tools import handle_tool_call, tool_to_function_tool
+from ok_agent.llama_cpp.types import Message
+from ok_agent.llama_cpp.utils import get_models
 from ok_agent.loggers import setup_logging
-from ok_agent.openai.completions import completion
-from ok_agent.openai.tools import handle_tool_call, tool_to_function_tool
-from ok_agent.openai.types import Message
-from ok_agent.openai.utils import get_models
 from ok_agent.tools.registry import create_registry, get_tools
 from ok_agent.utils import get_system_prompt
 
@@ -108,12 +108,11 @@ def handle_model_command(state: AppState, query: str):
 
 
 def cli():
-    initial_prompt = get_system_prompt()
     state = AppState(
         model="",
         context_usage=0,
         context_window=0,
-        messages=[initial_prompt],
+        messages=[get_system_prompt()],
         models=[],
     )
 
@@ -136,19 +135,18 @@ def cli():
             handle_model_command(state, query)
             continue
 
+        if not state.model:
+            print("Please select a model with /model command")
+            continue
+
         user_message: Message = {"role": "user", "content": query}
         state.messages.append(user_message)
 
-        if not state.model:
-            print("Please select a model with /model command")
-            state.messages = [initial_prompt]
-            continue
-
         while True:
             result = completion(
+                model=state.model,
                 messages=state.messages,
                 tools=function_tools,
-                model=state.model,
             )
             # TODO: add stop reason handling
 

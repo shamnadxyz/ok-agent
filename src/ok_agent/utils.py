@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ok_agent.config import logger
-from ok_agent.openai.types import ContentPartText, SystemMessage
+from ok_agent.llama_cpp.types import ContentPartText, SystemMessage
 
 
 def decode_bytes(input: bytes) -> str:

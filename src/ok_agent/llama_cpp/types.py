@@ -25,7 +25,6 @@ class FunctionDefinition(TypedDict):
     name: str
     description: NotRequired[str]
     parameters: NotRequired[JSONSchema]
-    strict: NotRequired[bool | None]
 
 
 class FunctionTool(TypedDict):
@@ -35,14 +34,9 @@ class FunctionTool(TypedDict):
     function: FunctionDefinition
 
 
-class PromptCacheBreakpoint(TypedDict):
-    mode: Literal["explicit"]
-
-
 class ContentPartText(TypedDict):
     type: Literal["text"]
     text: str
-    prompt_cache_breakpoint: NotRequired[PromptCacheBreakpoint]
 
 
 class SystemMessage(TypedDict):
@@ -59,8 +53,6 @@ class UserMessage(TypedDict):
 class AssistantMessage(TypedDict):
     role: Literal["assistant"]
     content: NotRequired[str | ContentPartText]
-    name: NotRequired[str]
-    refusal: NotRequired[str | None]
     tool_calls: NotRequired[list[MessageToolCall]]
 
 

@@ -64,7 +64,6 @@ def _validate_object(data: dict, schema: JSONSchema) -> str | None:
     required_arguments = schema.get("required", [])
 
     error_message = _check_arguments(required_arguments, data)
-
     if error_message:
         return error_message
 
@@ -95,23 +94,7 @@ def _validate_object(data: dict, schema: JSONSchema) -> str | None:
         return "Validation failed: " + "\n".join(validation_fails)
 
 
-def validate_tool(
-    data: dict, schema: JSONSchema, strict: bool = False
-) -> str | None:
-    properties = schema.get("properties")
-
-    if properties is None:
-        return None
-
-    required_arguments = (
-        [property for property, _ in properties.items()] if strict else []
-    )
-
-    error_message = _check_arguments(required_arguments, data)
-
-    if error_message:
-        return error_message
-
+def validate_tool(data: dict, schema: JSONSchema) -> str | None:
     return _validate_object(data, schema)
 
 
@@ -124,13 +107,11 @@ def execute_tool(name: str, arguments: str, registry: ToolRegistry) -> str:
         return message
 
     function = tool.get("function")
-    strict = tool.get("strict", False)
 
     try:
         args = json.loads(arguments)
 
-        error_message = validate_tool(args, tool["parameters_schema"], strict)
-
+        error_message = validate_tool(args, tool["parameters_schema"])
         if error_message:
             return error_message
 

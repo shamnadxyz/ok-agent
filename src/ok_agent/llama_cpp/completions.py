@@ -5,14 +5,14 @@ from collections.abc import Iterable
 from logging import getLogger
 
 from ok_agent.ansi_sequences import GREY, RESET
-from ok_agent.openai.types import (
+from ok_agent.llama_cpp.types import (
     Function,
     FunctionTool,
     Message,
     MessageToolCall,
     ResponseResult,
 )
-from ok_agent.openai.utils import build_request, get_error_message
+from ok_agent.llama_cpp.utils import build_request, get_error_message
 from ok_agent.utils import decode_bytes
 
 trace = getLogger("llm.traces")
@@ -107,8 +107,8 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
       List of Messages containing reasoning and output contents and tool call
       result and a boolean if response contain tool call
     """
-    reasoning_content: list[str] = []
     content: list[str] = []
+    reasoning_content: list[str] = []
     tool_calls: list[MessageToolCall] = []
 
     for line in response:
@@ -152,21 +152,21 @@ def _handle_response(response: Iterable[bytes]) -> ResponseResult:
 
 
 def completion(
+    model: str,
     messages: list[Message],
     tools: list[FunctionTool],
-    model: str | None,
     timeout: int = 300,
 ) -> ResponseResult | None:
-    """Sends the list of messages to LLM server."""
+    """Sends completion request to messages to llama-cpp server."""
     completions_endpoint = "/chat/completions"
 
     data = json.dumps(
         {
             "model": model,
             "messages": messages,
-            "stream": True,
             "tools": tools,
-        }
+            "stream": True,
+        },
     ).encode("utf-8")
 
     logger.debug(f"Request data: {data}")

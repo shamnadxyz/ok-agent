@@ -68,7 +68,7 @@ def get_models() -> list[str]:
             message = error_message
 
         logger.exception(message)
-        print(message)
+        print(f"\n{message}")
 
         return []
     except urllib.error.URLError as e:
