@@ -1,6 +1,6 @@
 import subprocess
 
-from ok_agent.tools.types import ToolSchema
+from ok_agent.tools.types import Tool
 from ok_agent.utils import decode_bytes
 
 
@@ -64,7 +64,7 @@ def execute_shell_command(
         return f"Value Error {cmd}: {type(e).__name__} {e}"
 
 
-shell_tool: ToolSchema = {
+shell_tool: Tool = {
     "name": "shell",
     "description": "Run shell command",
     "parameters": {

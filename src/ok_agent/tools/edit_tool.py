@@ -2,7 +2,7 @@ import difflib
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
-from ok_agent.tools.types import ToolSchema
+from ok_agent.tools.types import Tool
 
 
 def edit_file(path: str, old_text: str, new_text: str) -> str:
@@ -45,7 +45,7 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
         return f"Type Error: {type(e).__name__}: {e}"
 
 
-edit_tool: ToolSchema = {
+edit_tool: Tool = {
     "name": "edit",
     "description": "Edit a file",
     "parameters": {
@@ -64,7 +64,7 @@ edit_tool: ToolSchema = {
                 "description": "text to replace with",
             },
         },
+        "required": ["path", "old_text", "new_text"],
     },
-    "strict": True,
     "function": edit_file,
 }

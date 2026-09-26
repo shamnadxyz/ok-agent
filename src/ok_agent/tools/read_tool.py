@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
-from ok_agent.tools.types import ToolSchema
+from ok_agent.tools.types import Tool
 
 
 def read_file(path: str) -> str:
@@ -24,7 +24,7 @@ def read_file(path: str) -> str:
         return f"Type Error '{file.name}' {type(e).__name__} {e}"
 
 
-read_tool: ToolSchema = {
+read_tool: Tool = {
     "name": "read",
     "description": "Read file",
     "parameters": {
@@ -35,6 +35,7 @@ read_tool: ToolSchema = {
                 "description": "path of the file",
             }
         },
+        "required": ["path"],
     },
     "function": read_file,
 }

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
-from ok_agent.tools.types import ToolSchema
+from ok_agent.tools.types import Tool
 
 
 def write_file(path: str, content: str) -> str:
@@ -27,7 +27,7 @@ def write_file(path: str, content: str) -> str:
         return f"Type Error: {type(e).__name__} {e}"
 
 
-write_tool: ToolSchema = {
+write_tool: Tool = {
     "name": "write",
     "description": "Write a new file. Parent dirs are created if missing. Cannot write over existing file.",
     "parameters": {
@@ -42,6 +42,7 @@ write_tool: ToolSchema = {
                 "description": "content to write",
             },
         },
+        "required": ["path", "content"],
     },
     "function": write_file,
 }

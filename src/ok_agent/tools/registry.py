@@ -6,8 +6,8 @@ from ok_agent.tools.read_tool import read_tool
 from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.types import (
     SchemaType,
+    Tool,
     ToolRegistry,
-    ToolSchema,
 )
 from ok_agent.tools.write_tool import write_tool
 
@@ -111,7 +111,7 @@ def execute_tool(name: str, arguments: str, registry: ToolRegistry) -> str:
     try:
         args = json.loads(arguments)
 
-        error_message = validate_tool(args, tool["parameters_schema"])
+        error_message = validate_tool(args, tool["parameters"])
         if error_message:
             return error_message
 
@@ -128,16 +128,9 @@ def execute_tool(name: str, arguments: str, registry: ToolRegistry) -> str:
         return f"Tool call failed: {type(e).__name__}: {e}"
 
 
-def get_tools() -> list[ToolSchema]:
+def get_tools() -> list[Tool]:
     return [read_tool, write_tool, shell_tool, edit_tool]
 
 
-def create_registry(tools: list[ToolSchema]) -> ToolRegistry:
-    return {
-        tool["name"]: {
-            "function": tool["function"],
-            "strict": tool.get("strict", False),
-            "parameters_schema": tool["parameters"],
-        }
-        for tool in tools
-    }
+def create_registry(tools: list[Tool]) -> ToolRegistry:
+    return {tool["name"]: tool for tool in tools}

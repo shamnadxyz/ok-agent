@@ -3,12 +3,12 @@ from logging import getLogger
 from ok_agent.ansi_sequences import BLACK_BG, RESET
 from ok_agent.llama_cpp.types import FunctionTool, MessageToolCall, ToolMessage
 from ok_agent.tools.registry import execute_tool
-from ok_agent.tools.types import ToolRegistry, ToolSchema
+from ok_agent.tools.types import Tool, ToolRegistry
 
 logger = getLogger(__name__)
 
 
-def tool_to_function_tool(tool: ToolSchema) -> FunctionTool:
+def tool_to_function_tool(tool: Tool) -> FunctionTool:
     """Convert Tool to OpenAI ChatCompletionFunctionTool."""
     function: FunctionTool = {
         "type": "function",

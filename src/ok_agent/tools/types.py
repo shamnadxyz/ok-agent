@@ -57,14 +57,7 @@ type ToolRegistry = dict[str, Tool]
 
 
 class Tool(TypedDict):
-    parameters_schema: JSONSchema
-    function: Callable
-    strict: NotRequired[bool]
-
-
-class ToolSchema(TypedDict):
     name: str
-    description: str
+    description: NotRequired[str]
     parameters: JSONSchema
     function: Callable
-    strict: NotRequired[bool]
