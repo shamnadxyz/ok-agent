@@ -4,10 +4,6 @@ from ok_agent.config import logger
 from ok_agent.llama_cpp.types import ContentPartText, SystemMessage
 
 
-def decode_bytes(input: bytes) -> str:
-    return input.decode("utf-8", errors="ignore")
-
-
 def get_system_prompt() -> SystemMessage:
     agents = Path("AGENTS.md")
 

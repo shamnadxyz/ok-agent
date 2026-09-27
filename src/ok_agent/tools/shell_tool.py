@@ -1,7 +1,6 @@
 import subprocess
 
 from ok_agent.tools.types import Tool
-from ok_agent.utils import decode_bytes
 
 
 def _format_process_message(
@@ -14,13 +13,15 @@ def _format_process_message(
 
     if stdout:
         if isinstance(stdout, bytes):
-            messages.append(decode_bytes(stdout))
+            messages.append(stdout.decode("utf-8", errors="ignore"))
         elif isinstance(stdout, str):
             messages.append(stdout)
 
     if stderr:
         if isinstance(stderr, bytes):
-            messages.append(f"<stderr>{decode_bytes(stderr)}</stderr>")
+            messages.append(
+                f"<stderr>{stderr.decode('utf-8', errors='ignore')}</stderr>"
+            )
         elif isinstance(stderr, str):
             messages.append(f"<stderr>{stderr}</stderr>")
 

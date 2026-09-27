@@ -10,10 +10,9 @@ from ok_agent.llama_cpp.types import (
     FunctionTool,
     Message,
     MessageToolCall,
-    ResponseResult,
+    Response,
 )
 from ok_agent.llama_cpp.utils import build_request, get_error_message
-from ok_agent.utils import decode_bytes
 
 trace = getLogger("llm.traces")
 logger = getLogger(__name__)
@@ -41,22 +40,6 @@ def _parse_data(event: str) -> dict | None:
     except json.JSONDecodeError:
         logger.exception("Invalid JSON")
         return None
-
-
-def _extract_delta(event: str) -> dict | None:
-    data = _parse_data(event)
-
-    if data is None:
-        return None
-
-    choices = data.get("choices")
-
-    if not choices:
-        return None
-
-    choice: dict = choices[0]
-
-    return choice.get("delta")
 
 
 def _parse_tool_stream(tool_calls: list[MessageToolCall], delta: dict) -> None:
@@ -95,60 +78,81 @@ def _parse_tool_stream(tool_calls: list[MessageToolCall], delta: dict) -> None:
             tool_calls[idx]["function"]["arguments"] += argument
 
 
-def _handle_response(response: Iterable[bytes]) -> ResponseResult:
+def _handle_stream(stream: Iterable[bytes]) -> Response:
     """Parses the LLM response and prints it.
 
     Parses the SSE byte streaming response from the LLM server then prints the
     reasoning content in gray color and prints the output without color.
-
-    Args:
-      response: byte stream
-    Returns:
-      List of Messages containing reasoning and output contents and tool call
-      result and a boolean if response contain tool call
     """
-    content: list[str] = []
-    reasoning_content: list[str] = []
+    role = None
+    contents: list[str] = []
+    reasoning_contents: list[str] = []
     tool_calls: list[MessageToolCall] = []
+    finish_reason = None
 
-    for line in response:
-        decoded_response = decode_bytes(line).strip()
+    for line in stream:
+        decoded_response = line.decode("utf-8", errors="ignore").strip()
+        trace.debug(decoded_response)
         if decoded_response == "":
             continue
 
-        delta = _extract_delta(decoded_response)
-        if delta is None:
+        data = _parse_data(decoded_response)
+        if data is None:
             continue
+
+        choices = data.get("choices", [])
+
+        if not choices:
+            continue
+
+        choice: dict = choices[0]
+
+        if "finish_reason" in choice:
+            finish_reason = choice["finish_reason"]
+
+        delta = choice.get("delta")
+
+        if not delta:
+            continue
+
+        if "role" in delta:
+            role = delta["role"]
 
         if "tool_calls" in delta:
             _parse_tool_stream(tool_calls, delta)
 
         if "reasoning_content" in delta:
-            reasoning = delta.get("reasoning_content") or ""
-            print(f"{GREY}{reasoning}{RESET}", end="", flush=True)
-            reasoning_content.append(reasoning)
+            reasoning_content = delta.get("reasoning_content")
+            if reasoning_content:
+                print(f"{GREY}{reasoning_content}{RESET}", end="", flush=True)
+                reasoning_contents.append(reasoning_content)
 
         if "content" in delta:
-            output = delta.get("content") or ""
-            print(output, end="", flush=True)
-            content.append(output)
+            content = delta.get("content")
+            if content:
+                print(content, end="", flush=True)
+                contents.append(content)
     print()
 
-    result: ResponseResult = {"content": "".join(content)}
+    response: Response = {"message": {"role": role if role else "assistant"}}
+
+    if contents:
+        response["message"]["content"] = "".join(contents)
 
     if tool_calls:
-        result["tool_calls"] = tool_calls
+        response["message"]["tool_calls"] = tool_calls
 
-    trace.debug(
-        {
-            **result,
-            "reasoning_content": "".join(reasoning_content)
-            if reasoning_content
-            else None,
-        }
-    )
+    if reasoning_contents:
+        response["message"]["reasoning_content"] = "".join(reasoning_contents)
 
-    return result
+    if finish_reason:
+        response["finish_reason"] = finish_reason
+    else:
+        logger.warning("finish_reason missing")
+
+    trace.debug(response)
+
+    return response
 
 
 def completion(
@@ -156,25 +160,30 @@ def completion(
     messages: list[Message],
     tools: list[FunctionTool],
     timeout: int = 300,
-) -> ResponseResult | None:
+) -> Response | None:
     """Sends completion request to messages to llama-cpp server."""
     completions_endpoint = "/chat/completions"
 
     data = json.dumps(
         {
             "model": model,
-            "messages": messages,
-            "tools": tools,
             "stream": True,
+            "tools": tools,
+            "messages": messages,
         },
-    ).encode("utf-8")
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode()
 
     logger.debug(f"Request data: {data}")
 
     request = build_request(completions_endpoint, data, method="POST")
+    request.add_header("Content-Type", "application/json")
+
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            return _handle_response(response)
+            return _handle_stream(response)
 
     except urllib.error.HTTPError as e:
         message = e.reason

@@ -29,7 +29,7 @@ def build_request(
     endpoint: Endpoint,
     data: bytes | None = None,
     method: Method = "GET",
-):
+) -> urllib.request.Request:
     config = get_config()
     api_base_url = config["api_base_url"]
     completions_endpoint = f"{api_base_url}{endpoint}"
