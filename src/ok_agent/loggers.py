@@ -16,7 +16,7 @@ def _create_rotating_logger(
     config = get_config()
     logs_path = config["state_dir"] / "logs"
 
-    logs_path.mkdir(exist_ok=True)
+    logs_path.mkdir(parents=True, exist_ok=True)
 
     logger = getLogger() if name is None else getLogger(name)
 
