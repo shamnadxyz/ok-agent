@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from logging import getLogger
 
 from ok_agent.ansi_sequences import GREY, RESET
+from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import (
     Function,
     FunctionTool,
@@ -90,6 +91,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     tool_calls: list[MessageToolCall] = []
     finish_reason = None
 
+    config = get_config()
+
     for line in stream:
         decoded_response = line.decode("utf-8", errors="ignore").strip()
         trace.debug(decoded_response)
@@ -142,7 +145,7 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     if tool_calls:
         response["message"]["tool_calls"] = tool_calls
 
-    if reasoning_contents:
+    if reasoning_contents and config.preserve_reasoning:
         response["message"]["reasoning_content"] = "".join(reasoning_contents)
 
     if finish_reason:

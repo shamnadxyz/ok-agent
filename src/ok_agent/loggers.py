@@ -1,8 +1,9 @@
 import logging
 from logging import Logger, getLogger
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-from ok_agent.config import get_config
+from ok_agent.constants import STATE_DIR
 
 
 def _create_rotating_logger(
@@ -13,21 +14,22 @@ def _create_rotating_logger(
     level: int = logging.DEBUG,
     propagate: bool = True,
 ) -> Logger:
-    config = get_config()
-    logs_path = config["state_dir"] / "logs"
+    logs_dir = Path(f"{STATE_DIR}/logs").expanduser()
 
-    logs_path.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
     logger = getLogger() if name is None else getLogger(name)
 
-    handler = RotatingFileHandler(
-        logs_path / filename,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8",
-    )
+    if not logger.handlers:
+        handler = RotatingFileHandler(
+            logs_dir / filename,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding="utf-8",
+        )
 
-    logger.addHandler(handler)
+        logger.addHandler(handler)
+
     logger.setLevel(level)
     logger.propagate = propagate
 

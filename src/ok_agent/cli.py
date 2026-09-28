@@ -5,7 +5,7 @@ from logging import getLogger
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BOLD, RESET
-from ok_agent.config import get_config
+from ok_agent.config import ConfigError, get_config
 from ok_agent.llama_cpp.completions import completion
 from ok_agent.llama_cpp.tools import handle_tool_call, tool_to_function_tool
 from ok_agent.llama_cpp.types import AssistantMessage, Message
@@ -22,7 +22,7 @@ logger = getLogger(__name__)
 class AppState:
     messages: list[Message]
     models: list[str]
-    model: str = ""
+    model: str | None
 
 
 def get_model_completions() -> list[str]:
@@ -59,10 +59,10 @@ def init_completions():
 
 
 def init_readline():
-    config = get_config()
     home = Path.home()
     histfile = home / ".ok_history"
-    history_length = config["history_length"]
+    config = get_config()
+    history_length = config.history_length
 
     readline.parse_and_bind(r"set completion-ignore-case on")
     readline.parse_and_bind(r"set enable-bracketed-paste on")
@@ -120,7 +120,7 @@ def agent_loop(state: AppState, tools: list[Tool]):
                 handle_model_command(state, query)
                 continue
 
-            if not state.model:
+            if state.model is None:
                 print("Please select a model with /model command")
                 continue
 
@@ -138,7 +138,6 @@ def agent_loop(state: AppState, tools: list[Tool]):
                 if (
                     "content" in assistant_message
                     or "tool_calls" in assistant_message
-                    or "reasoning_content" in assistant_message
                 ):
                     state.messages.append(assistant_message)
                 else:
@@ -171,12 +170,20 @@ def agent_loop(state: AppState, tools: list[Tool]):
 
 
 def cli():
+    try:
+        config = get_config()
+    except ConfigError as e:
+        print(f"{e.path}: {e.message}")
+        raise SystemExit
+
     print(f"{BOLD}Ok Agent{RESET}")
 
     init_readline()
     init_completions()
 
-    state = AppState(messages=[get_system_prompt()], models=[])
+    state = AppState(
+        messages=[get_system_prompt()], models=[], model=config.model
+    )
 
     agent_loop(state, tools=get_tools())
 
@@ -186,7 +193,7 @@ def main():
     try:
         cli()
     except (EOFError, SystemExit):
-        print("Exit")
+        print("\nExited")
 
 
 if __name__ == "__main__":

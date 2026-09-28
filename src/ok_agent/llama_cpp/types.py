@@ -1,6 +1,6 @@
 from typing import Literal, NotRequired, TypedDict
 
-from ok_agent.tools.types import JSONSchema
+from ok_agent.validator import JSONSchema
 
 Role = Literal["user", "tool", "assistant", "system"]
 

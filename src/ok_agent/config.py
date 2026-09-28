@@ -1,42 +1,101 @@
+import json
 import os
+from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import TypedDict
+
+from ok_agent.validator import ObjectSchema
+from ok_agent.validator import validate_object as validate_config
+from ok_agent.validator.validator import ValidationError
 
 logger = getLogger(__name__)
 
+CONFIG_SCHEMA: ObjectSchema = {
+    "type": "object",
+    "properties": {
+        "api_base_url": {"type": "string"},
+        "api_key": {"type": "string"},
+        "history_length": {"type": "integer"},
+        "preserve_reasoning": {"type": "boolean"},
+        "model": {"type": "string"},
+    },
+    "required": ["api_base_url"],
+    "additionalProperties": False,
+}
 
-class Config(TypedDict):
+
+@dataclass
+class Config:
     api_base_url: str
-    api_key: str | None
-    preserve_reasoning: bool
-    history_length: int
-    state_dir: Path
-    data_dir: Path
+    api_key: str = ""
+    preserve_reasoning: bool = False
+    history_length: int = 1000
+    model: str | None = None
 
 
-def _get_base_url():
-    return os.getenv(
-        "OPENAI_BASE_URL", "http://localhost:9931/v1"
-    ).removesuffix("/")
+def get_config_dir() -> Path:
+    xdg_config_path = os.getenv("XDG_CONFIG_HOME")
+
+    if xdg_config_path:
+        return Path(xdg_config_path) / "ok-agent"
+    else:
+        return Path.home() / ".config" / "ok-agent"
 
 
-def _get_data_dir():
-    home = Path.home()
-    return home / ".local/share/ok-agent"
+class ConfigError(ValidationError):
+    def __init__(self, message: str, path: str):
+        self.path = path
+        super().__init__(message)
 
 
-def _get_state_dir() -> Path:
-    home = Path.home()
-    return home / ".local/state/ok-agent"
+def load_config() -> dict:
+    """Loads config file config.json and validates it.
+
+    Returns:
+        Validated configuration dict
+
+    Raises:
+        ConfigError: if schema validation fails
+    """
+    config_dir = get_config_dir()
+    config_file = config_dir / "config.json"
+
+    logger.debug(config_file)
+
+    try:
+        with open(config_file, "rb") as f:
+            config = json.load(f)
+            validate_config(config, CONFIG_SCHEMA)
+            return config
+    except ValidationError as e:
+        raise ConfigError(message=e.message, path=str(config_file.resolve()))
+    except json.JSONDecodeError as e:
+        raise ConfigError(
+            message=str(*e.args),
+            path=str(config_file.resolve()),
+        )
+    except OSError as e:
+        logger.error(
+            f"Failed to read config '{config_file}' {type(e).__name__} {e}"
+        )
+
+    return {}
+
+
+_config_cache: Config | None = None
 
 
 def get_config() -> Config:
-    return {
-        "api_base_url": _get_base_url(),
-        "api_key": os.getenv("OPENAI_API_KEY"),
-        "history_length": 1000,
-        "preserve_reasoning": False,
-        "state_dir": _get_state_dir(),
-        "data_dir": _get_data_dir(),
-    }
+    """Returns validated configuration.
+
+    Raises:
+        ConfigError: if config validation fails
+    """
+    global _config_cache
+    if _config_cache:
+        return _config_cache
+
+    config = load_config()
+    _config_cache = Config(**config)
+
+    return _config_cache

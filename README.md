@@ -12,7 +12,7 @@ A minimal cli coding agent that is built without any external dependencies.
 
 - [x] JSON schema validation for tools
 - [x] Commands
+- [x] Configuration file
 - [ ] Chat persistence
 - [ ] Handle long tool outputs
 - [ ] Compaction
-- [ ] Configuration file
