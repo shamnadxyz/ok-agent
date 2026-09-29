@@ -6,6 +6,7 @@ A minimal cli coding agent that is built without any external packages.
 
 - Read
 - Write
+- Edit
 - Shell
 
 ## Alpha Release Milestone
