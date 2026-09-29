@@ -75,11 +75,10 @@ def load_config() -> dict:
             path=str(config_file.resolve()),
         )
     except OSError as e:
-        logger.error(
-            f"Failed to read config '{config_file}' {type(e).__name__} {e}"
+        raise ConfigError(
+            message=f"Failed to read config '{config_file}' {type(e).__name__} {e}",
+            path=str(config_file.resolve()),
         )
-
-    return {}
 
 
 _config_cache: Config | None = None
