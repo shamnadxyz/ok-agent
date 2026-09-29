@@ -38,7 +38,7 @@ def execute_shell_command(
 
     try:
         result = subprocess.run(
-            ["bash", "-c", cmd],
+            ["sh", "-c", cmd],
             input=input,
             text=True,
             capture_output=True,

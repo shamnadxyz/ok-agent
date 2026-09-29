@@ -1,12 +1,12 @@
 # Ok Agent
 
-A minimal cli coding agent that is built without any external dependencies.
+A minimal cli coding agent that is built without any external packages.
 
 ## Tools
 
 - Read
 - Write
-- Bash
+- Shell
 
 ## Alpha Release Milestone
 
