@@ -1,3 +1,4 @@
+import argparse
 import atexit
 import readline
 from dataclasses import dataclass
@@ -173,11 +174,7 @@ def agent_loop(state: AppState, tools: list[Tool]):
 
 
 def cli():
-    try:
-        config = get_config()
-    except ConfigError as e:
-        print(f"{e.path}: {e.message}")
-        raise SystemExit
+    config = get_config()
 
     print(f"{BOLD}Ok Agent{RESET}")
 
@@ -193,6 +190,40 @@ def cli():
 
 def main():
     setup_logging()
+
+    try:
+        config = get_config()
+    except ConfigError as e:
+        print(f"{e.path}: {e.message}")
+        raise SystemExit
+
+    parser = argparse.ArgumentParser(
+        prog="ok-agent", description="A minimal coding agent"
+    )
+
+    parser.add_argument("-m", "--model", metavar="MODEL_ID")
+    parser.add_argument("--api-base-url")
+    parser.add_argument(
+        "--preserve-reasoning",
+        action="store_true",
+        help="include reasoning in requests",
+    )
+    parser.add_argument("--api-key")
+
+    args = parser.parse_args()
+
+    if args.model:
+        config.model = args.model
+
+    if args.api_base_url:
+        config.api_base_url = args.api_base_url
+
+    if args.api_key:
+        config.api_key = args.api_key
+
+    if args.preserve_reasoning:
+        config.preserve_reasoning = args.preserve_reasoning
+
     try:
         cli()
     except (EOFError, SystemExit):
