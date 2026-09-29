@@ -98,7 +98,10 @@ def handle_model_command(state: AppState, query: str):
         print("Please pass the model id")
         return
 
-    if selected_model not in state.models or state.model == selected_model:
+    if state.model == selected_model:
+        return
+
+    if selected_model not in state.models:
         print(f"model '{selected_model}' not found")
         return
 
