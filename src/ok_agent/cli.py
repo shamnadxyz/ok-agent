@@ -1,6 +1,8 @@
 import argparse
 import atexit
 import readline
+import sys
+import termios
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
@@ -113,9 +115,22 @@ def handle_model_command(state: AppState, query: str):
 def agent_loop(state: AppState, tools: list[Tool]):
     tool_registry = create_registry(tools)
     function_tools = [tool_to_function_tool(tool) for tool in tools]
+
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    new = termios.tcgetattr(fd)
+    # Disable the ECHO attribute
+    new[3] = new[3] & ~termios.ECHO
+
     while True:
         try:
+            # Restore original terminal attributes
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
             query = input("\n> ").strip()
+
+            # Set the attributes to disable echoing of typed characters
+            termios.tcsetattr(fd, termios.TCSADRAIN, new)
 
             if query.lower() == "exit":
                 raise SystemExit
@@ -171,6 +186,8 @@ def agent_loop(state: AppState, tools: list[Tool]):
         except KeyboardInterrupt:
             print("\nAgent Interrupted")
             continue
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
 def cli():
