@@ -113,6 +113,7 @@ def handle_model_command(state: AppState, query: str):
 
 
 def agent_loop(state: AppState, tools: list[Tool]):
+    config = get_config()
     tool_registry = create_registry(tools)
     function_tools = [tool_to_function_tool(tool) for tool in tools]
 
@@ -127,7 +128,7 @@ def agent_loop(state: AppState, tools: list[Tool]):
             # Restore original terminal attributes
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-            query = input("\n> ").strip()
+            query = input(config.prompt_text).strip()
 
             # Set the attributes to disable echoing of typed characters
             termios.tcsetattr(fd, termios.TCSADRAIN, new)

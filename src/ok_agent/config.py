@@ -18,6 +18,7 @@ CONFIG_SCHEMA: ObjectSchema = {
         "history_length": {"type": "integer"},
         "preserve_reasoning": {"type": "boolean"},
         "model": {"type": "string"},
+        "prompt_text": {"type": "string"},
     },
     "required": ["api_base_url"],
     "additionalProperties": False,
@@ -31,6 +32,7 @@ class Config:
     preserve_reasoning: bool = False
     history_length: int = 1000
     model: str | None = None
+    prompt_text: str = "> "
 
 
 def get_config_dir() -> Path:

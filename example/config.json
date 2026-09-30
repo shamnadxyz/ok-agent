@@ -3,5 +3,6 @@
 	"api_key": "secure",
 	"model": "zai-org/GLM-5.3-Flash",
 	"history_length": 1000,
-	"preserve_reasoning": false
+	"preserve_reasoning": false,
+	"prompt_text": "❯ "
 }
