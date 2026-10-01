@@ -1,34 +1,8 @@
+import json
 import subprocess
 
 from ok_agent.tools.types import Tool
 
-
-def _format_process_message(
-    stdout: str | bytes | None,
-    stderr: str | bytes | None,
-    returncode: int | None = None,
-) -> str:
-
-    messages = []
-
-    if stdout:
-        if isinstance(stdout, bytes):
-            messages.append(stdout.decode("utf-8", errors="ignore"))
-        elif isinstance(stdout, str):
-            messages.append(stdout)
-
-    if stderr:
-        if isinstance(stderr, bytes):
-            messages.append(
-                f"<stderr>{stderr.decode('utf-8', errors='ignore')}</stderr>"
-            )
-        elif isinstance(stderr, str):
-            messages.append(f"<stderr>{stderr}</stderr>")
-
-    if returncode is not None and returncode != 0:
-        messages.append(f"exit code: {returncode}")
-
-    return "\n".join(messages)
 
 
 def execute_shell_command(
@@ -45,16 +19,19 @@ def execute_shell_command(
             timeout=timeout,
             check=False,
         )
-        return _format_process_message(
-            stdout=result.stdout,
-            stderr=result.stderr,
-            returncode=result.returncode,
+        return json.dumps(
+            {
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
+            },
+            separators=(":", ","),
         )
 
     except subprocess.TimeoutExpired as e:
-        return _format_process_message(
-            stdout=e.stdout,
-            stderr=e.stderr,
+        return json.dumps(
+            {"stdout": e.stdout, "stderr": e.stderr, "timeout": True},
+            separators=(":", ","),
         )
 
     except FileNotFoundError:

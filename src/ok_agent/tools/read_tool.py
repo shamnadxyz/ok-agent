@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
@@ -13,11 +14,17 @@ def read_file(path: str) -> str:
         if file.is_file() or file.is_symlink():
             return file.read_text()
         elif file.is_dir():
-            return f"{file.name} directory contents:\n" + "\n".join(
-                [dir.name for dir in file.iterdir()]
+            return json.dumps(
+                {
+                    "type": "DIR",
+                    "content": [item.name for item in file.iterdir()],
+                },
+                separators=(",", ":"),
             )
+        elif file.exists():
+            return f"reading '{file.name}' is not supported"
         else:
-            return f"read: '{file.name}' no such file or directory"
+            return f"'{file.name}' no such file or directory"
     except OSError as e:
         return f"Failed to read '{file.name}' {type(e).__name__} {e}"
     except TypeError as e:
