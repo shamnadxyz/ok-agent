@@ -33,8 +33,7 @@ def write_file(filepath: str, content: str) -> str:
 
     try:
         file.write_text(content)
-
-        return file.read_text()
+        return f"write success: '{filepath}'"
     except OSError as e:
         return f"Failed to write file '{file.name}' {type(e).__name__} {e}"
     except TypeError as e:
