@@ -65,7 +65,7 @@ def edit_file(filepath: str, old_text: str, new_text: str) -> str:
 
 
 edit_tool: Tool = {
-    "name": "edit_file",
+    "name": "edit",
     "parameters": parameter_schema,
     "function": edit_file,
 }

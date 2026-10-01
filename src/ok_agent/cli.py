@@ -7,13 +7,14 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.agent import agent
+from ok_agent.agent import NoResponseError, agent
 from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.config import ConfigError, get_config
 from ok_agent.llama_cpp.types import Message
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.loggers import setup_logging
 from ok_agent.tools import (
+    ToolNotFoundError,
     ToolRegistry,
     edit_tool,
     read_tool,
@@ -197,7 +198,12 @@ def main():
         help="include reasoning in requests",
     )
     parser.add_argument("--api-key")
-    parser.add_argument("--list-tools", action="store_true")
+    parser.add_argument("-l", "--list-tools", action="store_true")
+    parser.add_argument(
+        "-T",
+        "--tools",
+        help="tools to enable (eg: 'read,shell')",
+    )
 
     args = parser.parse_args()
 
@@ -213,10 +219,18 @@ def main():
     if args.preserve_reasoning:
         config.preserve_reasoning = args.preserve_reasoning
 
+    if args.tools:
+        tools = [tool.strip() for tool in args.tools.split(",")]
+        try:
+            tool_registry = ToolRegistry(tool_registry.get_tools(tools))
+        except ToolNotFoundError as e:
+            message = f"tool '{e.name}' not found"
+            logger.error(message)
+            print(message)
+
     if args.list_tools:
         for tool in tool_registry.get_tools():
             print(tool["name"])
-
         return
 
     try:

@@ -43,7 +43,7 @@ def read_file(filepath: str) -> str:
 
 
 read_tool: Tool = {
-    "name": "read_file",
+    "name": "read",
     "parameters": parameter_schema,
     "function": read_file,
 }

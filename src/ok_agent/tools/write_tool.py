@@ -42,7 +42,7 @@ def write_file(filepath: str, content: str) -> str:
 
 
 write_tool: Tool = {
-    "name": "write_file",
+    "name": "write",
     "description": "Write a new file. Parent dirs are created if missing. Cannot overwrite an existing file.",
     "parameters": parameter_schema,
     "function": write_file,
