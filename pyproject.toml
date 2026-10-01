@@ -2,7 +2,7 @@
 name = "ok_agent"
 version = "0.0.1"
 authors = [
-  { name = "shamnadxyz", email = "shamnadxyz@proton.me" }
+  { name = "Shamnad A S", email = "shamnadxyz@proton.me" }
 ]
 description = "A minimal cli coding agent without any external dependencies."
 readme = "README.md"
