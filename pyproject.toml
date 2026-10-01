@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = [
   { name = "Shamnad A S", email = "shamnadxyz@proton.me" }
 ]
-description = "A minimal cli coding agent without any external dependencies."
+description = "A minimal cli coding agent built without any external packages."
 readme = "README.md"
 requires-python = ">=3.13"
 
