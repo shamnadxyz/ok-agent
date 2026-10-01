@@ -3,12 +3,31 @@ from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
 from ok_agent.tools.types import Tool
+from ok_agent.validator import JSONSchema
+
+parameter_schema: JSONSchema = {
+    "type": "object",
+    "properties": {
+        "filepath": {
+            "type": "string",
+        },
+        "old_text": {
+            "type": "string",
+            "description": "unique text to be replaced",
+        },
+        "new_text": {
+            "type": "string",
+            "description": "text to replace with",
+        },
+    },
+    "required": ["filepath", "old_text", "new_text"],
+}
 
 
-def edit_file(path: str, old_text: str, new_text: str) -> str:
-    print(f"{BLACK_BG}{BLUE_BRIGHT}Edit {path}{RESET}")
+def edit_file(filepath: str, old_text: str, new_text: str) -> str:
+    print(f"{BLACK_BG}{BLUE_BRIGHT}Edit {filepath}{RESET}")
 
-    file = Path(path)
+    file = Path(filepath)
 
     if not file.exists():
         return f"File '{file.name}' does not exists"
@@ -46,25 +65,7 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
 
 
 edit_tool: Tool = {
-    "name": "edit",
-    "description": "Edit a file",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "path of file",
-            },
-            "old_text": {
-                "type": "string",
-                "description": "unique text to be replaced",
-            },
-            "new_text": {
-                "type": "string",
-                "description": "text to replace with",
-            },
-        },
-        "required": ["path", "old_text", "new_text"],
-    },
+    "name": "edit_file",
+    "parameters": parameter_schema,
     "function": edit_file,
 }

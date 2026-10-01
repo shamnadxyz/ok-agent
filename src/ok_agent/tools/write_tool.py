@@ -2,12 +2,26 @@ from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
 from ok_agent.tools.types import Tool
+from ok_agent.validator import JSONSchema
+
+parameter_schema: JSONSchema = {
+    "type": "object",
+    "properties": {
+        "filepath": {
+            "type": "string",
+        },
+        "content": {
+            "type": "string",
+        },
+    },
+    "required": ["filepath", "content"],
+}
 
 
-def write_file(path: str, content: str) -> str:
-    print(f"{BLACK_BG}{BLUE_BRIGHT}Write {path}\n{content}{RESET}")
+def write_file(filepath: str, content: str) -> str:
+    print(f"{BLACK_BG}{BLUE_BRIGHT}Write {filepath}\n{content}{RESET}")
 
-    file = Path(path)
+    file = Path(filepath)
 
     if file.exists():
         return f"{file.name} already exists"
@@ -28,21 +42,8 @@ def write_file(path: str, content: str) -> str:
 
 
 write_tool: Tool = {
-    "name": "write",
-    "description": "Write a new file. Parent dirs are created if missing. Cannot write over existing file.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "path for the file",
-            },
-            "content": {
-                "type": "string",
-                "description": "content to write",
-            },
-        },
-        "required": ["path", "content"],
-    },
+    "name": "write_file",
+    "description": "Write a new file. Parent dirs are created if missing. Cannot overwrite an existing file.",
+    "parameters": parameter_schema,
     "function": write_file,
 }

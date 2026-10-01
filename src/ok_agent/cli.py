@@ -7,15 +7,19 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
+from ok_agent.agent import agent
 from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.config import ConfigError, get_config
-from ok_agent.llama_cpp.completions import completion
-from ok_agent.llama_cpp.tools import handle_tool_call, tool_to_function_tool
-from ok_agent.llama_cpp.types import AssistantMessage, Message
+from ok_agent.llama_cpp.types import Message
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.loggers import setup_logging
-from ok_agent.tools.registry import create_registry, get_tools
-from ok_agent.tools.types import Tool
+from ok_agent.tools import (
+    ToolRegistry,
+    edit_tool,
+    read_tool,
+    shell_tool,
+    write_tool,
+)
 from ok_agent.utils import get_system_prompt
 
 logger = getLogger(__name__)
@@ -112,16 +116,23 @@ def handle_model_command(state: AppState, query: str):
     print(f"Selected model: {selected_model}")
 
 
-def agent_loop(state: AppState, tools: list[Tool]):
+def cli(tool_registry: ToolRegistry):
     config = get_config()
-    tool_registry = create_registry(tools)
-    function_tools = [tool_to_function_tool(tool) for tool in tools]
+
+    print(f"{BOLD}Ok Agent{RESET}")
+
+    init_readline()
+    init_completions()
 
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     new = termios.tcgetattr(fd)
     # Disable the ECHO attribute
     new[3] = new[3] & ~termios.ECHO
+
+    app_state = AppState(
+        model=config.model, models=[], messages=[get_system_prompt()]
+    )
 
     while True:
         try:
@@ -137,73 +148,28 @@ def agent_loop(state: AppState, tools: list[Tool]):
                 raise SystemExit
 
             if query.startswith("/model"):
-                handle_model_command(state, query)
+                handle_model_command(app_state, query)
                 continue
 
-            if state.model is None:
+            if app_state.model is None:
                 print("Please select a model with /model command")
                 continue
 
-            user_message: Message = {"role": "user", "content": query}
-            state.messages.append(user_message)
+            agent(
+                query=query,
+                tools=tool_registry.get_tools(),
+                model=app_state.model,
+                messages=app_state.messages,
+            )
 
-            while response := completion(
-                model=state.model,
-                messages=state.messages,
-                tools=function_tools,
-            ):
-                assistant_message: AssistantMessage = response["message"]
-                finish_reason = response["finish_reason"]
-
-                if (
-                    "content" in assistant_message
-                    or "tool_calls" in assistant_message
-                ):
-                    state.messages.append(assistant_message)
-                else:
-                    if finish_reason == "length":
-                        print("Token generation limit exceeded.")
-                    else:
-                        print("The model did not produce any response")
-                    break
-
-                if "tool_calls" in assistant_message:
-                    tool_results = [
-                        handle_tool_call(tool_registry, tool_call)
-                        for tool_call in assistant_message["tool_calls"]
-                    ]
-
-                    state.messages.extend(tool_results)
-
-                match finish_reason:
-                    case "length":
-                        print("Token generation limit exceeded.")
-                        break
-                    case "stop":
-                        break
-                    case "tool_calls":
-                        pass
-
+        except NoResponseError as e:
+            logger.error(e.message)
+            print(e.message)
         except KeyboardInterrupt:
             print("\nAgent Interrupted")
             continue
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
-
-
-def cli():
-    config = get_config()
-
-    print(f"{BOLD}Ok Agent{RESET}")
-
-    init_readline()
-    init_completions()
-
-    state = AppState(
-        messages=[get_system_prompt()], models=[], model=config.model
-    )
-
-    agent_loop(state, tools=get_tools())
 
 
 def main():
@@ -214,6 +180,10 @@ def main():
     except ConfigError as e:
         print(f"{e.path}: {e.message}")
         raise SystemExit
+
+    tool_registry = ToolRegistry(
+        [read_tool, write_tool, edit_tool, shell_tool]
+    )
 
     parser = argparse.ArgumentParser(
         prog="ok-agent", description="A minimal coding agent"
@@ -227,6 +197,7 @@ def main():
         help="include reasoning in requests",
     )
     parser.add_argument("--api-key")
+    parser.add_argument("--list-tools", action="store_true")
 
     args = parser.parse_args()
 
@@ -242,8 +213,14 @@ def main():
     if args.preserve_reasoning:
         config.preserve_reasoning = args.preserve_reasoning
 
+    if args.list_tools:
+        for tool in tool_registry.get_tools():
+            print(tool["name"])
+
+        return
+
     try:
-        cli()
+        cli(tool_registry)
     except (EOFError, SystemExit):
         print("\nExited")
 

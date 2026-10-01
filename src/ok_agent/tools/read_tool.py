@@ -3,12 +3,23 @@ from pathlib import Path
 
 from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
 from ok_agent.tools.types import Tool
+from ok_agent.validator import JSONSchema
+
+parameter_schema: JSONSchema = {
+    "type": "object",
+    "properties": {
+        "filepath": {
+            "type": "string",
+        }
+    },
+    "required": ["filepath"],
+}
 
 
-def read_file(path: str) -> str:
-    print(f"{BLACK_BG}{BLUE_BRIGHT}Read {path}{RESET}")
+def read_file(filepath: str) -> str:
+    print(f"{BLACK_BG}{BLUE_BRIGHT}Read {filepath}{RESET}")
 
-    file = Path(path)
+    file = Path(filepath)
 
     try:
         if file.is_file() or file.is_symlink():
@@ -32,17 +43,7 @@ def read_file(path: str) -> str:
 
 
 read_tool: Tool = {
-    "name": "read",
-    "description": "Read file",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "path of the file",
-            }
-        },
-        "required": ["path"],
-    },
+    "name": "read_file",
+    "parameters": parameter_schema,
     "function": read_file,
 }

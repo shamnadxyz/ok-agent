@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from ok_agent.config import logger
+from ok_agent.constants import AGENT_PROMPT
 from ok_agent.llama_cpp.types import ContentPartText, SystemMessage
 
 
@@ -10,7 +11,7 @@ def get_system_prompt() -> SystemMessage:
     system_message: list[ContentPartText] = [
         {
             "type": "text",
-            "text": "You are a coding agent inside the Ok agent harness. Your focus is on minimalism in everything.",
+            "text": AGENT_PROMPT,
         },
     ]
 

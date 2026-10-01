@@ -3,8 +3,6 @@ from typing import NotRequired, TypedDict
 
 from ok_agent.validator import JSONSchema
 
-type ToolRegistry = dict[str, Tool]
-
 
 class Tool(TypedDict):
     name: str

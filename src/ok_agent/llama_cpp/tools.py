@@ -2,8 +2,7 @@ from logging import getLogger
 
 from ok_agent.ansi_sequences import BLACK_BG, RESET
 from ok_agent.llama_cpp.types import FunctionTool, MessageToolCall, ToolMessage
-from ok_agent.tools.registry import execute_tool
-from ok_agent.tools.types import Tool, ToolRegistry
+from ok_agent.tools import Tool, ToolRegistry
 
 logger = getLogger(__name__)
 
@@ -14,23 +13,25 @@ def tool_to_function_tool(tool: Tool) -> FunctionTool:
         "type": "function",
         "function": {
             "name": tool["name"],
-            "description": tool["description"],
             "parameters": tool["parameters"],
         },
     }
+
+    if "description" in tool:
+        function["function"]["description"] = tool["description"]
 
     return function
 
 
 def handle_tool_call(
-    registry: ToolRegistry,
+    tool_registry: ToolRegistry,
     tool_call: MessageToolCall,
 ) -> ToolMessage:
     function = tool_call.get("function")
     arguments_json = function.get("arguments")
     name = function.get("name")
 
-    tool_content = execute_tool(name, arguments_json, registry)
+    tool_content = tool_registry.execute_tool(name, arguments_json)
 
     print(f"{BLACK_BG}{tool_content}{RESET}")
 

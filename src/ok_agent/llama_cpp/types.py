@@ -39,33 +39,43 @@ class ContentPartText(TypedDict):
     text: str
 
 
+type Content = str | list[ContentPartText]
+
+
 class SystemMessage(TypedDict):
     role: Literal["system"]
-    content: str | list[ContentPartText]
+    content: Content
 
 
 class UserMessage(TypedDict):
     role: Literal["user"]
-    content: str | list[ContentPartText]
+    content: Content
     name: NotRequired[str]
-
-
-class AssistantMessage(TypedDict):
-    role: Literal["assistant"]
-    content: NotRequired[str | ContentPartText]
-    reasoning_content: NotRequired[str]
-    tool_calls: NotRequired[list[MessageToolCall]]
 
 
 class ToolMessage(TypedDict):
     role: Literal["tool"]
     tool_call_id: str
-    content: str | list[ContentPartText]
+    content: Content
+
+
+class AssistantMessage(TypedDict):
+    role: Literal["assistant"]
+    content: NotRequired[Content]
+    reasoning_content: NotRequired[str]
+    tool_calls: NotRequired[list[MessageToolCall]]
+
+
+class CompletionMessage(TypedDict):
+    role: Literal["assistant"]
+    content: NotRequired[str]
+    reasoning_content: NotRequired[str]
+    tool_calls: NotRequired[list[MessageToolCall]]
 
 
 Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage
 
 
 class Response(TypedDict, total=False):
-    message: AssistantMessage
+    message: CompletionMessage
     finish_reason: Literal["length", "stop", "tool_calls"]
