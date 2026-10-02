@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
+from ok_agent.constants import PROGRAM_NAME
 from ok_agent.validator import ObjectSchema
 from ok_agent.validator import validate_object as validate_config
 from ok_agent.validator.validator import ValidationError
@@ -39,9 +40,9 @@ def get_config_dir() -> Path:
     xdg_config_path = os.getenv("XDG_CONFIG_HOME")
 
     if xdg_config_path:
-        return Path(xdg_config_path) / "ok-agent"
+        return Path(xdg_config_path) / PROGRAM_NAME
     else:
-        return Path.home() / ".config" / "ok-agent"
+        return Path.home() / ".config" / PROGRAM_NAME
 
 
 class ConfigError(ValidationError):
