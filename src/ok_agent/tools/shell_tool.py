@@ -1,3 +1,4 @@
+import re
 import subprocess
 
 from ok_agent.tools.types import Tool
@@ -55,10 +56,41 @@ def _format_process_message(
     return "\n".join(messages)
 
 
+guardrails = [
+    (
+        r".* /( .*|$|;.*|&&.*|/+)",
+        "Commands with root '/' as argument is not allowed. It is very DANGEROUS.",
+    ),
+    (
+        r".* *(~|/home/[a-zA-Z0-9]+/? *)( .*|$|;.*|&&.*|/+)",
+        "Commands with user's home directory as argument is not allowed. It is very DANGEROUS and contains sensitive information don't try to access it. If need any info ask the user.",
+    ),
+    (
+        r"(^| +)rm ",
+        "rm command is forbidden. It is very DANGEROUS. Please ask the user to remove if required.",
+    ),
+    (
+        r"(^| +)ls +.*-R.*",
+        "ls with option -R is prohibited. Please use `ls -a` to list the current directory and go from there.",
+    ),
+]
+
+
+def check_guardrails(command: str) -> str | None:
+    for regex, message in guardrails:
+        if re.match(regex, command):
+            return message
+
+
 def execute_shell_command(
     command: str, timeout: int = 10, input: str | None = None
 ) -> str:
     print(f"$ {command}")
+
+    error_message = check_guardrails(command)
+
+    if error_message:
+        return error_message
 
     try:
         result = subprocess.run(
