@@ -12,7 +12,7 @@ type Endpoint = Literal["/models", "/chat/completions"]
 type Method = Literal["GET", "POST"]
 
 
-def get_error_message(response: urllib.error.HTTPError) -> str | None:
+def _get_error_message(response: urllib.error.HTTPError) -> str | None:
     try:
         json_data = response.read().decode("utf-8")
         data = json.loads(json_data)
@@ -61,7 +61,7 @@ def get_models() -> list[str]:
             return [entry["id"] for entry in data["data"] if "id" in entry]
     except urllib.error.HTTPError as e:
         message = e.reason
-        error_message = get_error_message(e)
+        error_message = _get_error_message(e)
 
         if error_message is not None:
             message = error_message

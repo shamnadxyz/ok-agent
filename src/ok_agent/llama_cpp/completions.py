@@ -13,7 +13,7 @@ from ok_agent.llama_cpp.types import (
     MessageToolCall,
     Response,
 )
-from ok_agent.llama_cpp.utils import build_request, get_error_message
+from ok_agent.llama_cpp.utils import _get_error_message, build_request
 
 trace = getLogger("llm.traces")
 logger = getLogger(__name__)
@@ -190,7 +190,7 @@ def completion(
 
     except urllib.error.HTTPError as e:
         message = e.reason
-        error_message = get_error_message(e)
+        error_message = _get_error_message(e)
 
         if error_message is not None:
             message = error_message
