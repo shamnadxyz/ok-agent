@@ -24,7 +24,7 @@ def write_file(filepath: str, content: str) -> str:
     file = Path(filepath)
 
     if file.exists():
-        return f"{file.name} already exists"
+        return f"{file.name} already exists. Cannot overwrite files. Please use edit tool"
 
     try:
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -42,7 +42,7 @@ def write_file(filepath: str, content: str) -> str:
 
 write_tool: Tool = {
     "name": "write",
-    "description": "Write a new file. Parent dirs are created if missing. Cannot overwrite an existing file.",
+    "description": "Write a new file. Parent dirs are created if missing. Cannot overwrite files.",
     "parameters": parameter_schema,
     "function": write_file,
 }
