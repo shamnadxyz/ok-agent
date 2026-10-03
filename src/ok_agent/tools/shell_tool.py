@@ -62,10 +62,6 @@ guardrails = [
         "Commands with root '/' as argument is not allowed. It is very DANGEROUS.",
     ),
     (
-        r".* *(~|/home/[a-zA-Z0-9]+/? *)( .*|$|;.*|&&.*|/+)",
-        "Commands with user's home directory as argument is not allowed. It is very DANGEROUS and contains sensitive information don't try to access it. If need any info ask the user.",
-    ),
-    (
         r"(^| +)rm ",
         "rm command is forbidden. It is very DANGEROUS. Please ask the user to remove if required.",
     ),
