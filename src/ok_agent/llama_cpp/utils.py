@@ -12,17 +12,19 @@ type Endpoint = Literal["/models", "/chat/completions"]
 type Method = Literal["GET", "POST"]
 
 
-def _get_error_message(response: urllib.error.HTTPError) -> str | None:
+def get_response_error_message(response: urllib.error.HTTPError) -> str:
     try:
         json_data = response.read().decode("utf-8")
         data = json.loads(json_data)
 
-        return data.get("error", {}).get("message")
+        return data.get("error", {}).get("message") or response.reason
 
     except UnicodeDecodeError as e:
         logger.exception(e.reason)
     except json.JSONDecodeError:
         logger.exception("JSON decode error")
+
+    return response.reason
 
 
 def build_request(
@@ -61,7 +63,7 @@ def get_models() -> list[str]:
             return [entry["id"] for entry in data["data"] if "id" in entry]
     except urllib.error.HTTPError as e:
         message = e.reason
-        error_message = _get_error_message(e)
+        error_message = get_response_error_message(e)
 
         if error_message is not None:
             message = error_message
