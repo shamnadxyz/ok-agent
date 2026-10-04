@@ -79,6 +79,32 @@ def load_config() -> dict:
             message=str(*e.args),
             path=str(config_file.resolve()),
         )
+    except FileNotFoundError:
+        config_dir.mkdir(exist_ok=True)
+        print("Press enter for accepting the default")
+
+        default_base_url = "http://localhost:8080/v1"
+        api_base_url = input(
+            f"llama.cpp base url (default: '{default_base_url}'): "
+        )
+
+        api_key = input("llama.cpp API key (default: ''): ")
+
+        default_model = "llama"
+        model_id = input(f"model id: (default: '{default_model}'): ")
+
+        default_config = Config(
+            api_base_url=api_base_url or default_base_url,
+            api_key=api_key,
+            model=model_id,
+            prompt_text="❯ ",
+        )
+
+        config_json = json.dumps(vars(default_config), indent=2)
+        config_file.write_text(config_json)
+
+        return load_config()
+
     except OSError as e:
         raise ConfigError(
             message=f"Failed to read config {type(e).__name__} {e}",
