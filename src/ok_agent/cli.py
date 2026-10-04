@@ -6,10 +6,12 @@ import termios
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
+from urllib.error import URLError
 
-from ok_agent.agent import NoResponseError, agent
+from ok_agent.agent import NoResponseError, TurnLimitExceededError, agent
 from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.config import ConfigError, get_config
+from ok_agent.llama_cpp.completions import CompletionError
 from ok_agent.llama_cpp.types import Message
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.loggers import setup_logging
@@ -136,26 +138,26 @@ def cli(tool_registry: ToolRegistry):
     )
 
     while True:
+        # Restore original terminal attributes
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+        query = input(config.prompt_text).strip()
+
+        # Set the attributes to disable echoing of typed characters
+        termios.tcsetattr(fd, termios.TCSADRAIN, new)
+
+        if query.lower() == "exit":
+            raise SystemExit()
+
+        if query.startswith("/model"):
+            handle_model_command(app_state, query)
+            continue
+
+        if app_state.model is None:
+            print("Please select a model with /model command")
+            continue
+
         try:
-            # Restore original terminal attributes
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
-
-            query = input(config.prompt_text).strip()
-
-            # Set the attributes to disable echoing of typed characters
-            termios.tcsetattr(fd, termios.TCSADRAIN, new)
-
-            if query.lower() == "exit":
-                raise SystemExit
-
-            if query.startswith("/model"):
-                handle_model_command(app_state, query)
-                continue
-
-            if app_state.model is None:
-                print("Please select a model with /model command")
-                continue
-
             agent(
                 query=query,
                 tools=tool_registry.get_tools(),
@@ -163,9 +165,18 @@ def cli(tool_registry: ToolRegistry):
                 messages=app_state.messages,
             )
 
+        except CompletionError as e:
+            logger.error(e.message)
+            print(e.message)
         except NoResponseError as e:
             logger.error(e.message)
             print(e.message)
+        except TurnLimitExceededError as e:
+            logger.error(e.message)
+            print(e.message)
+        except URLError as e:
+            logger.error(e.reason)
+            print(e.reason)
         except KeyboardInterrupt:
             print("\nAgent Interrupted")
             continue
@@ -180,7 +191,7 @@ def main():
         config = get_config()
     except ConfigError as e:
         print(f"{e.path}: {e.message}")
-        raise SystemExit
+        raise SystemExit()
 
     tool_registry = ToolRegistry(
         [read_tool, write_tool, edit_tool, shell_tool]

@@ -13,10 +13,23 @@ from ok_agent.llama_cpp.types import (
     MessageToolCall,
     Response,
 )
-from ok_agent.llama_cpp.utils import _get_error_message, build_request
+from ok_agent.llama_cpp.utils import build_request, get_response_error_message
 
 trace = getLogger("llm.traces")
 logger = getLogger(__name__)
+
+
+class NoFinishReasonError(Exception):
+    def __init__(self, response: Response):
+        self.response = response
+
+
+class CompletionError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+
+    def __str__(self):
+        return self.message
 
 
 def _parse_data(event: str) -> dict | None:
@@ -84,6 +97,9 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     Parses the SSE byte streaming response from the LLM server then prints the
     reasoning content in gray color and prints the output without color.
+
+    Raises:
+        NoFinishReasonError: if no finish_reason was received
     """
     role = None
     contents: list[str] = []
@@ -148,10 +164,10 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     if reasoning_contents and config.preserve_reasoning:
         response["message"]["reasoning_content"] = "".join(reasoning_contents)
 
-    if finish_reason:
-        response["finish_reason"] = finish_reason
-    else:
-        logger.warning("finish_reason missing")
+    if not finish_reason:
+        raise NoFinishReasonError(response)
+
+    response["finish_reason"] = finish_reason
 
     trace.debug(response)
 
@@ -163,8 +179,17 @@ def completion(
     messages: list[Message],
     tools: list[FunctionTool],
     timeout: int = 300,
-) -> Response | None:
-    """Sends completion request to messages to llama-cpp server."""
+) -> Response:
+    """Sends completion request to messages to llama-cpp server.
+
+    Returns:
+        Response with CompletionMessage and finish_reason
+
+    Raises:
+        CompletionError: if HTTPError occured
+        NoFinishReasonError: if no finish_reason was received
+        URLError
+    """
     completions_endpoint = "/chat/completions"
 
     data = json.dumps(
@@ -189,17 +214,8 @@ def completion(
             return _handle_stream(response)
 
     except urllib.error.HTTPError as e:
-        message = e.reason
-        error_message = _get_error_message(e)
+        error_message = get_response_error_message(e)
+        raise CompletionError(message=error_message)
 
-        if error_message is not None:
-            message = error_message
-
-        logger.exception(message)
-        print(message)
-
-        return None
-    except urllib.error.URLError as e:
-        logger.exception(e.reason)
-        print(e.reason)
-        return None
+    except urllib.error.URLError:
+        raise
