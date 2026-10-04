@@ -163,6 +163,7 @@ def cli(tool_registry: ToolRegistry):
                 tools=tool_registry.get_tools(),
                 model=app_state.model,
                 messages=app_state.messages,
+                max_turns=config.max_turns,
             )
 
         except CompletionError as e:
@@ -216,6 +217,13 @@ def main():
         help="tools to enable (eg: 'read,shell')",
     )
 
+    parser.add_argument(
+        "-t",
+        "--max-turns",
+        help=f"Maximum number of turns for the agent (default: {config.max_turns})",
+        type=int,
+    )
+
     args = parser.parse_args()
 
     if args.model:
@@ -243,6 +251,9 @@ def main():
         for tool in tool_registry.get_tools():
             print(tool["name"])
         return
+
+    if args.max_turns:
+        config.max_turns = args.max_turns
 
     try:
         cli(tool_registry)
