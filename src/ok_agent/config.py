@@ -20,6 +20,7 @@ CONFIG_SCHEMA: ObjectSchema = {
         "preserve_reasoning": {"type": "boolean"},
         "model": {"type": "string"},
         "prompt_text": {"type": "string"},
+        "max_turns": {"type": "integer"},
     },
     "required": ["api_base_url"],
     "additionalProperties": False,
@@ -34,6 +35,7 @@ class Config:
     history_length: int = 1000
     model: str | None = None
     prompt_text: str = "> "
+    max_turns: int = 15
 
 
 def get_config_dir() -> Path:
@@ -52,7 +54,7 @@ class ConfigError(ValidationError):
 
 
 def load_config() -> dict:
-    """Loads config file config.json and validates it.
+    """Loads configuration file config.json and validates it.
 
     Returns:
         Validated configuration dict
@@ -91,7 +93,7 @@ def get_config() -> Config:
     """Returns validated configuration.
 
     Raises:
-        ConfigError: if config validation fails
+        ConfigError: if configuration validation fails
     """
     global _config_cache
     if _config_cache:
