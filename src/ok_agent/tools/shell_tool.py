@@ -20,10 +20,6 @@ parameter_schema: JSONSchema = {
             "type": "number",
             "description": "command timeout (default: 10)",
         },
-        "input": {
-            "type": "string",
-            "description": "text sent to stdin",
-        },
     },
     "required": ["command"],
 }
@@ -84,9 +80,7 @@ def check_guardrails(command: str) -> str | None:
             return message
 
 
-def execute_shell_command(
-    command: str, timeout: int = 10, input: str | None = None
-) -> str:
+def execute_shell_command(command: str, timeout: int = 10) -> str:
     error_message = check_guardrails(command)
 
     if error_message:
@@ -95,7 +89,6 @@ def execute_shell_command(
     try:
         result = subprocess.run(
             ["sh", "-c", command],
-            input=input,
             text=True,
             capture_output=True,
             timeout=timeout,
