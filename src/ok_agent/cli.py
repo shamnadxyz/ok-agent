@@ -3,6 +3,7 @@ import atexit
 import readline
 import sys
 import termios
+from copy import deepcopy
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
@@ -16,12 +17,9 @@ from ok_agent.llama_cpp.types import Message
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.loggers import setup_logging
 from ok_agent.tools import (
+    TOOL_REGISTRY,
     ToolNotFoundError,
     ToolRegistry,
-    edit_tool,
-    read_tool,
-    shell_tool,
-    write_tool,
 )
 from ok_agent.utils import get_system_prompt
 
@@ -194,9 +192,7 @@ def main():
         print(f"{e.path}: {e.message}")
         raise SystemExit()
 
-    tool_registry = ToolRegistry(
-        [read_tool, write_tool, edit_tool, shell_tool]
-    )
+    tool_registry = deepcopy(TOOL_REGISTRY)
 
     parser = argparse.ArgumentParser(
         prog="ok-agent", description="A minimal coding agent"
@@ -241,7 +237,7 @@ def main():
     if args.tools:
         tools = [tool.strip() for tool in args.tools.split(",")]
         try:
-            tool_registry = ToolRegistry(tool_registry.get_tools(tools))
+            tool_registry = ToolRegistry(TOOL_REGISTRY.get_tools(tools))
         except ToolNotFoundError as e:
             message = f"tool '{e.name}' not found"
             logger.error(message)
@@ -257,7 +253,7 @@ def main():
 
     try:
         cli(tool_registry)
-    except (EOFError, SystemExit):
+    except (EOFError, SystemExit, KeyboardInterrupt):
         print("\nExited")
 
 

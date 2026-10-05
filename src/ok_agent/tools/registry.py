@@ -1,7 +1,11 @@
 import json
 from logging import getLogger
 
+from ok_agent.tools.edit_tool import edit_tool
+from ok_agent.tools.read_tool import read_tool
+from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.types import Tool
+from ok_agent.tools.write_tool import write_tool
 from ok_agent.validator import validate_object as validate_tool
 from ok_agent.validator.validator import ValidationError
 
@@ -11,6 +15,9 @@ logger = getLogger(__name__)
 class ToolNotFoundError(Exception):
     def __init__(self, name):
         self.name = name
+
+    def __str__(self):
+        return f"Tool not found: '{self.name}'"
 
 
 class ToolRegistry:
@@ -65,3 +72,8 @@ class ToolRegistry:
                 raise ToolNotFoundError(name=tool)
 
         return tools
+
+
+TOOL_REGISTRY = ToolRegistry(
+    tools=[read_tool, write_tool, edit_tool, shell_tool]
+)

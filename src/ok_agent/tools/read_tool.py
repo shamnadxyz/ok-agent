@@ -1,25 +1,27 @@
 import json
+from logging import getLogger
 from pathlib import Path
 
-from ok_agent.ansi_sequences import BLACK_BG, BLUE_BRIGHT, RESET
-from ok_agent.tools.types import Tool
+from ok_agent.ansi_sequences import BRIGHT_BLUE, RESET
+from ok_agent.tools.types import Tool, ToolDisplayState
+from ok_agent.tools.utils import handle_argument_display, is_complete
 from ok_agent.validator import JSONSchema
+
+logger = getLogger(__name__)
 
 parameter_schema: JSONSchema = {
     "type": "object",
     "properties": {
-        "filepath": {
+        "path": {
             "type": "string",
         }
     },
-    "required": ["filepath"],
+    "required": ["path"],
 }
 
 
-def read_file(filepath: str) -> str:
-    print(f"{BLACK_BG}{BLUE_BRIGHT}Read {filepath}{RESET}")
-
-    file = Path(filepath)
+def read_file(path: str) -> str:
+    file = Path(path)
 
     try:
         if file.is_file() or file.is_symlink():
@@ -42,8 +44,33 @@ def read_file(filepath: str) -> str:
         return f"Type Error '{file.name}' {type(e).__name__} {e}"
 
 
+def display_arguments(arguments: str, state: ToolDisplayState):
+    """Display read tool request arguments.
+
+    Args:
+        state: Used to track the progress of printed tool arguments.
+        arguments: Tool request JSON string.
+    """
+
+    if is_complete("path", state):
+        return
+
+    if not state.get("initialized"):
+        print(f"{BRIGHT_BLUE}Read {RESET}", end="", flush=True)
+        state["initialized"] = True
+
+    try:
+        data = json.loads(arguments)
+    except json.JSONDecodeError as e:
+        logger.error(e)
+        return
+
+    handle_argument_display(name="path", state=state, data=data)
+
+
 read_tool: Tool = {
     "name": "read",
     "parameters": parameter_schema,
     "function": read_file,
+    "display_arguments": display_arguments,
 }
