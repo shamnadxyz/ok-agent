@@ -1,8 +1,14 @@
+import json
 import re
 import subprocess
+from logging import getLogger
 
-from ok_agent.tools.types import Tool
+from ok_agent.ansi_sequences import BRIGHT_BLUE, RESET
+from ok_agent.tools.types import Tool, ToolDisplayState
+from ok_agent.tools.utils import handle_argument_display, is_complete
 from ok_agent.validator import JSONSchema
+
+logger = getLogger(__name__)
 
 parameter_schema: JSONSchema = {
     "type": "object",
@@ -62,11 +68,11 @@ guardrails = [
         "Commands with root '/' as argument is not allowed. It is very DANGEROUS.",
     ),
     (
-        r"(^| +)rm ",
-        "rm command is forbidden. It is very DANGEROUS. Please ask the user to remove if required.",
+        r"(^| +|;)rm ",
+        "rm command is forbidden. It is very DANGEROUS. Please request the user to remove the particular item.",
     ),
     (
-        r"(^| +)ls +.*-R.*",
+        r"(^| +|;)ls +.*-R.*",
         "ls with option -R is prohibited. Please use `ls -a` to list the current directory and go from there.",
     ),
 ]
@@ -81,8 +87,6 @@ def check_guardrails(command: str) -> str | None:
 def execute_shell_command(
     command: str, timeout: int = 10, input: str | None = None
 ) -> str:
-    print(f"$ {command}")
-
     error_message = check_guardrails(command)
 
     if error_message:
@@ -118,9 +122,34 @@ def execute_shell_command(
         return f"Value Error {command}: {type(e).__name__} {e}"
 
 
+def display_arguments(arguments: str, state: ToolDisplayState):
+    """Display shell tool request arguments.
+
+    Args:
+        state: Used to track the progress of printed tool command argument.
+        arguments: Tool request JSON string.
+    """
+
+    if is_complete("command", state):
+        return
+
+    if not state.get("initialized"):
+        print(f"{BRIGHT_BLUE}$ {RESET}", end="", flush=True)
+        state["initialized"] = True
+
+    try:
+        data = json.loads(arguments)
+    except json.JSONDecodeError as e:
+        logger.error(e)
+        return
+
+    handle_argument_display(name="command", state=state, data=data)
+
+
 shell_tool: Tool = {
     "name": "shell",
-    "description": "execute shell command",
+    "description": "Execute shell command.",
     "parameters": parameter_schema,
     "function": execute_shell_command,
+    "display_arguments": display_arguments,
 }

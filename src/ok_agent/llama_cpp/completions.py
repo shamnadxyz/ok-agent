@@ -4,7 +4,7 @@ import urllib.request
 from collections.abc import Iterable
 from logging import getLogger
 
-from ok_agent.ansi_sequences import GREY, RESET
+from ok_agent.ansi_sequences import BRIGHT_GRAY, RESET
 from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import (
     Function,
@@ -13,7 +13,16 @@ from ok_agent.llama_cpp.types import (
     MessageToolCall,
     Response,
 )
-from ok_agent.llama_cpp.utils import build_request, get_response_error_message
+from ok_agent.llama_cpp.utils import (
+    build_request,
+    get_response_error_message,
+    rescue_partial_json,
+)
+from ok_agent.tools import (
+    TOOL_REGISTRY,
+    ToolDisplayStates,
+    ToolNotFoundError,
+)
 
 trace = getLogger("llm.traces")
 logger = getLogger(__name__)
@@ -56,7 +65,11 @@ def _parse_data(event: str) -> dict | None:
         return None
 
 
-def _parse_tool_stream(tool_calls: list[MessageToolCall], delta: dict) -> None:
+def _parse_tool_stream(
+    tool_calls: list[MessageToolCall],
+    delta: dict,
+    tool_states: ToolDisplayStates,
+) -> None:
     for tool_call in delta.get("tool_calls", []):
         idx = tool_call.get("index")
         if idx is None:
@@ -66,7 +79,7 @@ def _parse_tool_stream(tool_calls: list[MessageToolCall], delta: dict) -> None:
         function_name = tool_function.get("name")
         argument = tool_function.get("arguments")
 
-        function_id = tool_call.get("id")
+        function_id: str = tool_call.get("id")
         tool_type = tool_call.get("type")
 
         if tool_type is not None and tool_type != "function":
@@ -86,10 +99,45 @@ def _parse_tool_stream(tool_calls: list[MessageToolCall], delta: dict) -> None:
                 "function": call,
             }
 
+            tool_states[function_id] = {
+                "initialized": False,
+                "argument_states": {},
+            }
+
             tool_calls.insert(idx, function)
 
         if argument:
             tool_calls[idx]["function"]["arguments"] += argument
+
+            tool_call_id = tool_calls[idx]["id"]
+            tool_name = tool_calls[idx]["function"]["name"]
+
+            try:
+                tools = TOOL_REGISTRY.get_tools([tool_name])
+            except ToolNotFoundError as e:
+                print(e)
+                continue
+
+            tool = tools[0]
+
+            if tool_call_id not in tool_states:
+                continue
+
+            tool_state = tool_states[tool_call_id]
+
+            complete_arguments = rescue_partial_json(
+                tool_calls[idx]["function"]["arguments"]
+            )
+
+            if complete_arguments is None:
+                continue
+
+            display_arguments = tool.get("display_arguments")
+
+            if not display_arguments:
+                continue
+
+            display_arguments(arguments=complete_arguments, state=tool_state)
 
 
 def _handle_stream(stream: Iterable[bytes]) -> Response:
@@ -106,6 +154,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     reasoning_contents: list[str] = []
     tool_calls: list[MessageToolCall] = []
     finish_reason = None
+
+    tool_display_states: ToolDisplayStates = {}
 
     config = get_config()
 
@@ -138,12 +188,20 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
             role = delta["role"]
 
         if "tool_calls" in delta:
-            _parse_tool_stream(tool_calls, delta)
+            _parse_tool_stream(
+                tool_calls=tool_calls,
+                delta=delta,
+                tool_states=tool_display_states,
+            )
 
         if "reasoning_content" in delta:
             reasoning_content = delta.get("reasoning_content")
             if reasoning_content:
-                print(f"{GREY}{reasoning_content}{RESET}", end="", flush=True)
+                print(
+                    f"{BRIGHT_GRAY}{reasoning_content}{RESET}",
+                    end="",
+                    flush=True,
+                )
                 reasoning_contents.append(reasoning_content)
 
         if "content" in delta:

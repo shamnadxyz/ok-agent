@@ -1,6 +1,5 @@
 from logging import getLogger
 
-from ok_agent.ansi_sequences import BLACK_BG, RESET
 from ok_agent.llama_cpp.types import FunctionTool, MessageToolCall, ToolMessage
 from ok_agent.tools import Tool, ToolRegistry
 
@@ -32,8 +31,7 @@ def handle_tool_call(
     name = function.get("name")
 
     tool_content = tool_registry.execute_tool(name, arguments_json)
-
-    print(f"{BLACK_BG}{tool_content}{RESET}")
+    print(tool_content)
 
     tool_message: ToolMessage = {
         "role": "tool",

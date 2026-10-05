@@ -81,3 +81,69 @@ def get_models() -> list[str]:
     except UnicodeDecodeError:
         logger.exception("Unicode decode error")
         return []
+
+
+def rescue_partial_json(string: str) -> str | None:
+    """Scans through the JSON string and adds the missing closing delimiters.
+
+    Args:
+        string: incomplete JSON string.
+
+    Returns:
+        Completed JSON string or None if a closing delimiter is encountered
+        without a matching opening delimiter.
+    """
+    BRACES_OPEN = "{"
+    BRACES_CLOSE = "}"
+    BRACKET_OPEN = "["
+    BRACKET_CLOSE = "]"
+    QUOTE = '"'
+    BACKSLASH = "\\"
+
+    open_delimiters: list[str] = []
+    escape_next = False
+    in_string = False
+
+    for char in string:
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == BACKSLASH:
+            escape_next = True
+            continue
+
+        if char == QUOTE:
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if char == BRACES_OPEN or char == BRACKET_OPEN:
+            open_delimiters.append(char)
+        elif char == BRACES_CLOSE:
+            if not open_delimiters or open_delimiters[-1] != BRACES_OPEN:
+                return None
+            open_delimiters.pop()
+        elif char == BRACKET_CLOSE:
+            if not open_delimiters or open_delimiters[-1] != BRACKET_OPEN:
+                return None
+            open_delimiters.pop()
+
+    if in_string:
+        open_delimiters.append(QUOTE)
+
+    if not open_delimiters:
+        return string
+
+    # Add the closing delimiters
+    for char in reversed(open_delimiters):
+        if char == BRACES_OPEN:
+            string += BRACES_CLOSE
+        elif char == BRACKET_OPEN:
+            string += BRACKET_CLOSE
+        else:
+            string += QUOTE
+
+    return string

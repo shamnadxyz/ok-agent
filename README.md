@@ -14,6 +14,7 @@ A minimal cli coding agent that is built without any external packages.
 - [x] JSON schema validation for tools
 - [x] Commands
 - [x] Configuration file
+- [x] Display streaming tool arguments
 - [ ] Chat persistence
 - [ ] Handle long tool outputs
 - [ ] Compaction
