@@ -2,6 +2,7 @@ from logging import getLogger
 
 from ok_agent.llama_cpp.types import FunctionTool, MessageToolCall, ToolMessage
 from ok_agent.tools import Tool, ToolRegistry
+from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
 
@@ -31,7 +32,7 @@ def handle_tool_call(
     name = function.get("name")
 
     tool_content = tool_registry.execute_tool(name, arguments_json)
-    print(tool_content)
+    display_text(tool_content)
 
     tool_message: ToolMessage = {
         "role": "tool",

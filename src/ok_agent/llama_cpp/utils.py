@@ -11,6 +11,7 @@ from ok_agent.tools import (
     ToolDisplayStates,
     ToolNotFoundError,
 )
+from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
 
@@ -75,7 +76,7 @@ def get_models() -> list[str]:
             message = error_message
 
         logger.exception(message)
-        print(f"\n{message}")
+        display_text(f"\n{message}", "ERROR")
 
         return []
     except urllib.error.URLError as e:
@@ -168,7 +169,7 @@ def display_tool_call(
     try:
         tools = TOOL_REGISTRY.get_tools([tool_name])
     except ToolNotFoundError as e:
-        print(e)
+        display_text(str(e), "ERROR")
         return
 
     tool = tools[0]

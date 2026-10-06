@@ -5,6 +5,7 @@ from logging import getLogger
 from pathlib import Path
 
 from ok_agent.constants import PROGRAM_NAME
+from ok_agent.utils import display_text
 from ok_agent.validator import ObjectSchema
 from ok_agent.validator import validate_object as validate_config
 from ok_agent.validator.validator import ValidationError
@@ -81,7 +82,7 @@ def load_config() -> dict:
         )
     except FileNotFoundError:
         config_dir.mkdir(exist_ok=True)
-        print("Press enter for accepting the default")
+        display_text("Press enter for accepting the default")
 
         default_base_url = "http://localhost:8080/v1"
         api_base_url = input(

@@ -1,4 +1,5 @@
 from ok_agent.tools.types import ArgumentState, ToolDisplayState
+from ok_agent.utils import Style, display_text
 
 
 def is_complete(name: str, state: ToolDisplayState) -> bool:
@@ -17,17 +18,18 @@ def handle_argument_display(
     name: str,
     state: ToolDisplayState,
     data: dict,
-    prefix: str = "",
-    suffix: str = "",
+    style: Style | None = None,
+    ensure_newline: bool = True,
 ):
     """Display streaming argument and track progress.
 
     Args:
         name: Name of the argument to track.
-        prefix: String to print before argument.
-        suffix: String to print after argument.
         state: State dictionary for tracking progress.
         data: Parsed arguments dictionary
+        style: Style used to display the text
+        ensure_newline: Ensure newline is printed at the end of the argument.
+            Some models might not produce newline at the end of arguments.
     """
     if name not in data:
         return
@@ -52,15 +54,12 @@ def handle_argument_display(
 
     if offset != 0 and offset == argument_length:
         argument_state["is_complete"] = True
-        print()
-        return
+
+        if ensure_newline and not argument.endswith("\n"):
+            display_text()
 
     slice = argument[offset:]
 
-    print(
-        f"{prefix}{slice}{suffix}",
-        end="",
-        flush=True,
-    )
+    display_text(slice, style, end="")
 
     argument_state["offset"] = argument_length
