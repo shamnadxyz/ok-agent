@@ -18,7 +18,7 @@ license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 
 [project.scripts]
-ok = "ok_agent.cli:main"
+ok = "ok_agent.cli:app"
 
 [build-system]
 requires = ["setuptools"]
