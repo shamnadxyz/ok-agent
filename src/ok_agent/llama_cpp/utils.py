@@ -5,6 +5,12 @@ from logging import getLogger
 from typing import Literal
 
 from ok_agent.config import get_config
+from ok_agent.llama_cpp.types import MessageToolCall
+from ok_agent.tools import (
+    TOOL_REGISTRY,
+    ToolDisplayStates,
+    ToolNotFoundError,
+)
 
 logger = getLogger(__name__)
 
@@ -147,3 +153,44 @@ def rescue_partial_json(string: str) -> str | None:
             string += QUOTE
 
     return string
+
+
+def display_tool_call(
+    tool_call: MessageToolCall, tool_states: ToolDisplayStates
+):
+    tool_call_id = tool_call["id"]
+    function = tool_call["function"]
+    tool_name = function["name"]
+
+    if not function["arguments"]:
+        return
+
+    try:
+        tools = TOOL_REGISTRY.get_tools([tool_name])
+    except ToolNotFoundError as e:
+        print(e)
+        return
+
+    tool = tools[0]
+
+    if tool_call_id not in tool_states:
+        tool_states[tool_call_id] = {
+            "initialized": False,
+            "argument_states": {},
+        }
+
+    tool_state = tool_states[tool_call_id]
+
+    complete_arguments = rescue_partial_json(
+        tool_call["function"]["arguments"]
+    )
+
+    if complete_arguments is None:
+        return
+
+    display_arguments = tool.get("display_arguments")
+
+    if not display_arguments:
+        return
+
+    display_arguments(arguments=complete_arguments, state=tool_state)

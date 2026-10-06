@@ -15,13 +15,11 @@ from ok_agent.llama_cpp.types import (
 )
 from ok_agent.llama_cpp.utils import (
     build_request,
+    display_tool_call,
     get_response_error_message,
-    rescue_partial_json,
 )
 from ok_agent.tools import (
-    TOOL_REGISTRY,
     ToolDisplayStates,
-    ToolNotFoundError,
 )
 
 trace = getLogger("llm.traces")
@@ -109,35 +107,7 @@ def _parse_tool_stream(
         if argument:
             tool_calls[idx]["function"]["arguments"] += argument
 
-            tool_call_id = tool_calls[idx]["id"]
-            tool_name = tool_calls[idx]["function"]["name"]
-
-            try:
-                tools = TOOL_REGISTRY.get_tools([tool_name])
-            except ToolNotFoundError as e:
-                print(e)
-                continue
-
-            tool = tools[0]
-
-            if tool_call_id not in tool_states:
-                continue
-
-            tool_state = tool_states[tool_call_id]
-
-            complete_arguments = rescue_partial_json(
-                tool_calls[idx]["function"]["arguments"]
-            )
-
-            if complete_arguments is None:
-                continue
-
-            display_arguments = tool.get("display_arguments")
-
-            if not display_arguments:
-                continue
-
-            display_arguments(arguments=complete_arguments, state=tool_state)
+        display_tool_call(tool_call=tool_calls[idx], tool_states=tool_states)
 
 
 def _handle_stream(stream: Iterable[bytes]) -> Response:
