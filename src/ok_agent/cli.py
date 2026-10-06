@@ -12,6 +12,7 @@ from ok_agent.tools import (
     ToolNotFoundError,
     ToolRegistry,
 )
+from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
 
@@ -22,7 +23,7 @@ def app():
     try:
         config = get_config()
     except ConfigError as e:
-        print(f"{e.path}: {e.message}")
+        display_text(f"{e.path}: {e.message}", "ERROR")
         raise SystemExit()
 
     tool_registry = deepcopy(TOOL_REGISTRY)
@@ -74,12 +75,12 @@ def app():
         except ToolNotFoundError as e:
             message = f"tool '{e.name}' not found"
             logger.error(message)
-            print(message)
+            display_text(message, "ERROR")
             raise SystemExit
 
     if args.list_tools:
         for tool in tool_registry.get_tools():
-            print(tool["name"])
+            display_text(tool["name"])
         return
 
     if args.max_turns:
@@ -88,7 +89,7 @@ def app():
     try:
         run_agent_loop(tool_registry)
     except (EOFError, SystemExit, KeyboardInterrupt):
-        print("\nExited")
+        display_text("\nExited")
 
 
 if __name__ == "__main__":

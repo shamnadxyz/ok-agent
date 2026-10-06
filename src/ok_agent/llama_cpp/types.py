@@ -2,10 +2,9 @@ from typing import Literal, NotRequired, TypedDict
 
 from ok_agent.validator import JSONSchema
 
-Role = Literal["user", "tool", "assistant", "system"]
-
-
-ToolType = Literal["function"]
+type Role = Literal["user", "tool", "assistant", "system"]
+type FinishReason = Literal["length", "stop", "tool_calls"]
+type ToolType = Literal["function"]
 
 
 class Function(TypedDict):
@@ -73,9 +72,9 @@ class CompletionMessage(TypedDict):
     tool_calls: NotRequired[list[MessageToolCall]]
 
 
-Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage
+type Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage
 
 
 class Response(TypedDict, total=False):
     message: CompletionMessage
-    finish_reason: Literal["length", "stop", "tool_calls"]
+    finish_reason: FinishReason

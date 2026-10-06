@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import cast
 from urllib.error import URLError
 
-from ok_agent.ansi_sequences import BOLD, RESET
 from ok_agent.config import get_config
 from ok_agent.constants import AGENT_PROMPT
 from ok_agent.llama_cpp.completions import (
@@ -25,7 +24,7 @@ from ok_agent.llama_cpp.types import (
 )
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.tools import Tool, ToolRegistry
-from ok_agent.utils import get_system_prompt
+from ok_agent.utils import display_text, get_system_prompt
 
 logger = getLogger(__name__)
 
@@ -139,18 +138,18 @@ def handle_model_command(state: AppState, query: str):
     selected_model = query.removeprefix("/model").strip()
 
     if selected_model == "":
-        print("Please pass the model id")
+        display_text("Please pass the model id")
         return
 
     if state.model == selected_model:
         return
 
     if selected_model not in state.models:
-        print(f"model '{selected_model}' not found")
+        display_text(f"model '{selected_model}' not found", "ERROR")
         return
 
     state.model = selected_model
-    print(f"Selected model: {selected_model}")
+    display_text(f"Selected model: {selected_model}")
 
 
 def agent(
@@ -237,7 +236,7 @@ def agent(
 
         match finish_reason:
             case "length":
-                print("Token generation limit exceeded.")
+                display_text("Token generation limit exceeded.", "WARNING")
                 break
             case "stop":
                 break
@@ -259,7 +258,7 @@ def agent(
 def run_agent_loop(tool_registry: ToolRegistry):
     config = get_config()
 
-    print(f"{BOLD}Ok Agent{RESET}")
+    display_text("Ok Agent", bold=True)
 
     init_readline()
     init_completions()
@@ -291,7 +290,9 @@ def run_agent_loop(tool_registry: ToolRegistry):
             continue
 
         if app_state.model is None:
-            print("Please select a model with /model command")
+            display_text(
+                "Please select a model with /model command", "WARNING"
+            )
             continue
 
         try:
@@ -305,18 +306,18 @@ def run_agent_loop(tool_registry: ToolRegistry):
 
         except CompletionError as e:
             logger.error(e.message)
-            print(e.message)
+            display_text(e.message, "ERROR")
         except NoResponseError as e:
             logger.error(e.message)
-            print(e.message)
+            display_text(e.message, "ERROR")
         except TurnLimitExceededError as e:
             logger.error(e.message)
-            print(e.message)
+            display_text(e.message, "ERROR")
         except URLError as e:
             logger.error(e.reason)
-            print(e.reason)
+            display_text(str(e.reason), "ERROR")
         except KeyboardInterrupt:
-            print("\nAgent Interrupted")
+            display_text("\nAgent Interrupted")
             continue
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)

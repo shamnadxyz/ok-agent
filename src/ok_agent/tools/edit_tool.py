@@ -3,14 +3,9 @@ import json
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.ansi_sequences import (
-    BRIGHT_BLUE,
-    GREEN,
-    RED,
-    RESET,
-)
 from ok_agent.tools.types import Tool, ToolDisplayState
 from ok_agent.tools.utils import handle_argument_display, is_complete
+from ok_agent.utils import display_text
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -90,7 +85,7 @@ def display_arguments(arguments: str, state: ToolDisplayState):
 
     if not state.get("initialized"):
         state["initialized"] = True
-        print(f"{BRIGHT_BLUE}Edit {RESET}", end="", flush=True)
+        display_text("Edit ", "SPECIAL", end="")
 
     try:
         data = json.loads(arguments)
@@ -98,12 +93,23 @@ def display_arguments(arguments: str, state: ToolDisplayState):
         logger.error(e)
         return
 
-    handle_argument_display(name="path", state=state, data=data)
     handle_argument_display(
-        name="old_text", prefix=RED, suffix=RESET, state=state, data=data
+        name="path",
+        state=state,
+        ensure_newline=True,
+        data=data,
     )
     handle_argument_display(
-        name="new_text", prefix=GREEN, suffix=RESET, state=state, data=data
+        name="old_text",
+        style="ERROR",
+        state=state,
+        data=data,
+    )
+    handle_argument_display(
+        name="new_text",
+        style="OK",
+        state=state,
+        data=data,
     )
 
 
