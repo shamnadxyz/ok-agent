@@ -1,8 +1,9 @@
 {
 	"api_base_url": "http://localhost:9931/v1",
-	"api_key": "secure",
+	"api_key": "API_KEY",
 	"model": "zai-org/GLM-5.3-Flash",
 	"history_length": 1000,
 	"preserve_reasoning": false,
-	"prompt_text": "❯ "
+	"prompt_text": "❯ ",
+	"max_turns": 20
 }
