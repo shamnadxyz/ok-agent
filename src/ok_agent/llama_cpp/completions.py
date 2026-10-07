@@ -132,9 +132,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     config = get_config()
 
-    reasoning_printed = False
-    content_printed = False
-    previous_contents_length = 0
+    previously_reasoning = False
+    previously_content = False
 
     for line in stream:
         decoded_response = line.decode("utf-8", errors="ignore").strip()
@@ -166,30 +165,24 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
         content = delta.get("content")
 
         if reasoning_content:
+            if not previously_reasoning:
+                previously_reasoning = True
+
             display_text(reasoning_content, "DIM", end="")
             reasoning_contents.append(reasoning_content)
-        # Print newline at the end if missing
-        elif not reasoning_printed and reasoning_contents:
-            last_reasoning = reasoning_contents[-1]
-            if not last_reasoning.endswith("\n"):
-                display_text()
-            reasoning_printed = True
+        elif previously_reasoning:
+            previously_reasoning = False
+            display_text()
 
         if content:
+            if not previously_content:
+                previously_content = True
+
             display_text(content, end="")
             contents.append(content)
-
-        # Print newline at the end if missing.
-        # Check for when content present before tool calls.
-        if not content_printed and contents:
-            contents_length = len(contents)
-            if previous_contents_length == contents_length:
-                last_content_delta = contents[-1]
-                if not last_content_delta.endswith("\n"):
-                    display_text()
-                content_printed = True
-            else:
-                previous_contents_length = contents_length
+        elif previously_content:
+            previously_content = False
+            display_text()
 
         if "tool_calls" in delta:
             _parse_tool_stream(
@@ -198,11 +191,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
                 tool_states=tool_display_states,
             )
 
-    # Check for when content is the last response.
-    if not content_printed and contents:
-        last_content_delta = contents[-1]
-        if not last_content_delta.endswith("\n"):
-            display_text()
+    if previously_content:
+        display_text()
 
     response: Response = {"message": {"role": role or "assistant"}}
 
