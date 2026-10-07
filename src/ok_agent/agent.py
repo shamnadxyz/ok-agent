@@ -9,7 +9,6 @@ from typing import cast
 from urllib.error import URLError
 
 from ok_agent.config import get_config
-from ok_agent.constants import AGENT_PROMPT
 from ok_agent.llama_cpp.completions import (
     CompletionError,
     NoFinishReasonError,
@@ -18,9 +17,7 @@ from ok_agent.llama_cpp.completions import (
 from ok_agent.llama_cpp.tools import handle_tool_call, tool_to_function_tool
 from ok_agent.llama_cpp.types import (
     AssistantMessage,
-    Content,
     Message,
-    SystemMessage,
 )
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.tools import Tool, ToolRegistry
@@ -36,19 +33,35 @@ class AppState:
     model: str | None
 
 
-class NoResponseError(Exception):
-    """Raises when the agent fails to produce a response."""
+class AgentError(Exception):
+    """Common base class for all agent exceptions."""
+
+
+class NoResponseError(AgentError):
+    """Raises when the agent fails to produce a content response."""
+
+
+class LimitError(AgentError):
+    """Limit exceeded exceptions.
+
+    Attributes:
+        agent_response: The agent response from the last turn.
+    """
 
     def __init__(
-        self, message: str = "The model failed to produce a response"
+        self,
+        message: str,
+        agent_response: str | None = None,
     ):
-        self.message = message
-
-    def __str__(self):
-        return self.message
+        super().__init__(message)
+        self.agent_response = agent_response
 
 
-class TurnLimitExceededError(Exception):
+class TokenLimitError(LimitError):
+    """Raises when the finish reason is length."""
+
+
+class TurnLimitError(LimitError):
     """Raises when the maximum number of turns are exceeded.
 
     Attributes:
@@ -57,15 +70,17 @@ class TurnLimitExceededError(Exception):
 
     def __init__(
         self,
-        message: str = "The maximum number of turns exceeded",
+        turn: int,
+        turn_limit: int,
         agent_response: str | None = None,
     ):
-        self.agent_response = agent_response
-        self.message = message
-        super().__init__(message)
+        self.turn = turn
+        self.turn_limit = turn_limit
 
-    def __str__(self):
-        return self.message
+        super().__init__(
+            f"Turn limit reached: {self.turn}/{self.turn_limit}",
+            agent_response=agent_response,
+        )
 
 
 def init_completions():
@@ -174,7 +189,8 @@ def agent(
     Raises:
         CompletionError: if HTTPError occured
         NoResponseError: if agent did not produce a response.
-        TurnLimitExceededError: if the maximum number of turns are exceeded.
+        TurnLimitError: if the maximum number of turns are exceeded.
+        TokenLimitError: if the maximum token limit is reached.
         URLError
     """
 
@@ -230,8 +246,9 @@ def agent(
 
         match finish_reason:
             case "length":
-                display_text("Token generation limit exceeded.", "WARNING")
-                break
+                raise TokenLimitError(
+                    "Maximum token limit reached", agent_response=message
+                )
             case "stop":
                 break
             case "tool_calls":
@@ -241,7 +258,11 @@ def agent(
         turn += 1
 
     if turn >= max_turns:
-        raise TurnLimitExceededError(agent_response=message)
+        raise TurnLimitError(
+            turn=turn,
+            turn_limit=max_turns,
+            agent_response=message,
+        )
 
     if message is None:
         raise NoResponseError()
@@ -298,15 +319,15 @@ def run_agent_loop(tool_registry: ToolRegistry):
                 max_turns=config.max_turns,
             )
 
-        except CompletionError as e:
-            logger.error(e.message)
-            display_text(e.message, "ERROR")
+        except LimitError as e:
+            logger.error(e)
+            display_text(str(e), "ERROR")
         except NoResponseError as e:
-            logger.error(e.message)
-            display_text(e.message, "ERROR")
-        except TurnLimitExceededError as e:
-            logger.error(e.message)
-            display_text(e.message, "ERROR")
+            logger.error(e)
+            display_text(str(e), "ERROR")
+        except CompletionError as e:
+            logger.error(e)
+            display_text(str(e), "ERROR")
         except URLError as e:
             logger.error(e.reason)
             display_text(str(e.reason), "ERROR")
