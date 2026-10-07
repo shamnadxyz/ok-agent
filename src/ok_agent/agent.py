@@ -279,9 +279,6 @@ def run_agent_loop(tool_registry: ToolRegistry):
 
         query = input(config.prompt_text).strip()
 
-        # Set the attributes to disable echoing of typed characters
-        termios.tcsetattr(fd, termios.TCSADRAIN, new)
-
         if query.lower() == "exit":
             raise SystemExit()
 
@@ -296,6 +293,9 @@ def run_agent_loop(tool_registry: ToolRegistry):
             continue
 
         try:
+            # Set the attributes to disable echoing of typed characters
+            termios.tcsetattr(fd, termios.TCSADRAIN, new)
+
             agent(
                 query=query,
                 tools=tool_registry.get_tools(),
