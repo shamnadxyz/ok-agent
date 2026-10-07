@@ -55,10 +55,10 @@ def validate_array(data: list, schema: JSONSchema) -> None:
     if items is None:
         return
 
-    type = items.get("type")
+    item_type = items.get("type")
 
-    if not all(_is_type(item, type) for item in data):
-        raise ValidationError(f"each item in the array should be '{type}'")
+    if not all(_is_type(item, item_type) for item in data):
+        raise ValidationError(f"each item in the array should be '{item_type}'")
 
 
 def validate_object(data: dict, schema: JSONSchema) -> None:
