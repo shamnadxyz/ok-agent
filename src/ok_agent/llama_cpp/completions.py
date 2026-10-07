@@ -27,17 +27,16 @@ trace = getLogger("llm.traces")
 logger = getLogger(__name__)
 
 
-class NoFinishReasonError(Exception):
-    def __init__(self, response: Response):
-        self.response = response
-
-
 class CompletionError(Exception):
-    def __init__(self, message: str):
-        self.message = message
+    """Base class for completion errors."""
 
-    def __str__(self):
-        return self.message
+
+class NoFinishReasonError(Exception):
+    """Raised when finish_reason is not found in the response."""
+
+    def __init__(self, message, response: Response):
+        super().__init__(message)
+        self.response = response
 
 
 def _parse_data(event: str) -> dict | None:
@@ -218,7 +217,7 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
         response["message"]["reasoning_content"] = "".join(reasoning_contents)
 
     if not finish_reason:
-        raise NoFinishReasonError(response)
+        raise NoFinishReasonError("No finish reason", response)
 
     response["finish_reason"] = finish_reason
 
@@ -268,7 +267,7 @@ def completion(
 
     except urllib.error.HTTPError as e:
         error_message = get_response_error_message(e)
-        raise CompletionError(message=error_message)
+        raise CompletionError(error_message)
 
     except urllib.error.URLError:
         raise
