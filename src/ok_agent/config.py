@@ -108,7 +108,7 @@ def load_config() -> dict:
 
     except OSError as e:
         raise ConfigError(
-            message=f"Failed to read config {type(e).__name__} {e}",
+            message=str(*e.args),
             path=str(config_file.resolve()),
         )
 
