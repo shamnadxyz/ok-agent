@@ -1,4 +1,5 @@
 import sys
+import textwrap
 from logging import getLogger
 from pathlib import Path
 from typing import Literal
@@ -12,7 +13,6 @@ from ok_agent.ansi_sequences import (
     RESET,
     YELLOW,
 )
-from ok_agent.constants import AGENT_PROMPT
 from ok_agent.llama_cpp.types import ContentPartText, SystemMessage
 
 logger = getLogger(__name__)
@@ -24,7 +24,12 @@ def get_system_prompt() -> SystemMessage:
     system_message: list[ContentPartText] = [
         {
             "type": "text",
-            "text": AGENT_PROMPT,
+            "text": textwrap.dedent(f"""\
+                You are a helpful coding agent. 
+
+                cwd:"{Path.cwd()}"
+                Tools will be run relative to this directory.
+                """),
         },
     ]
 

@@ -157,7 +157,6 @@ def agent(
     tools: list[Tool],
     model: str,
     messages: list[Message],
-    system_prompt: Content = AGENT_PROMPT,
     max_turns: int = 15,
 ) -> str:
     """Send query to the agent.
@@ -167,7 +166,6 @@ def agent(
         tools: List of available tools to the agent.
         model: Model ID.
         messages: The agent's message history.
-        system_prompt: Agent's system prompt.  Ignored if messages is provided.
         max_turns: The maximum number of turns.
 
     Returns:
@@ -187,11 +185,7 @@ def agent(
     message = None
 
     if not messages:
-        system_message: SystemMessage = {
-            "role": "system",
-            "content": system_prompt,
-        }
-        messages.append(system_message)
+        messages = [get_system_prompt()]
 
     user_message: Message = {"role": "user", "content": query}
     messages.append(user_message)
