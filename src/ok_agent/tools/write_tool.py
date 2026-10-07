@@ -13,7 +13,7 @@ parameter_schema: JSONSchema = {
     "properties": {
         "path": {
             "type": "string",
-            "description": "Path to the file. Relative path is preferred",
+            "description": "Path for the file.",
         },
         "content": {
             "type": "string",
