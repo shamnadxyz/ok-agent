@@ -1,5 +1,4 @@
 import argparse
-from copy import deepcopy
 from logging import getLogger
 
 from ok_agent.agent import (
@@ -18,6 +17,7 @@ logger = getLogger(__name__)
 
 
 def app():
+    global TOOL_REGISTRY
     setup_logging()
 
     try:
@@ -25,8 +25,6 @@ def app():
     except ConfigError as e:
         display_text(f"{e.path}: {e.message}", "ERROR")
         raise SystemExit()
-
-    tool_registry = deepcopy(TOOL_REGISTRY)
 
     parser = argparse.ArgumentParser(
         prog="ok-agent", description="A minimal coding agent"
@@ -71,7 +69,7 @@ def app():
     if args.tools:
         tools = [tool.strip() for tool in args.tools.split(",")]
         try:
-            tool_registry = ToolRegistry(TOOL_REGISTRY.get_tools(tools))
+            TOOL_REGISTRY = ToolRegistry(TOOL_REGISTRY.get_tools(tools))
         except ToolNotFoundError as e:
             message = f"tool '{e.name}' not found"
             logger.error(message)
@@ -79,7 +77,7 @@ def app():
             raise SystemExit
 
     if args.list_tools:
-        for tool in tool_registry.get_tools():
+        for tool in TOOL_REGISTRY.get_tools():
             display_text(tool["name"])
         return
 
@@ -87,7 +85,7 @@ def app():
         config.max_turns = args.max_turns
 
     try:
-        run_agent_loop(tool_registry)
+        run_agent_loop(TOOL_REGISTRY)
     except (EOFError, SystemExit, KeyboardInterrupt):
         display_text("\nExited")
 
