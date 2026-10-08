@@ -1,11 +1,8 @@
-import json
 import re
 import subprocess
 from logging import getLogger
 
-from ok_agent.tools.types import Tool, ToolDisplayState
-from ok_agent.tools.utils import handle_argument_display, is_complete
-from ok_agent.utils import display_text
+from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -115,38 +112,17 @@ def execute_shell_command(command: str, timeout: int = 10) -> str:
         return f"Value Error {command}: {type(e).__name__} {e}"
 
 
-def display_arguments(arguments: str, state: ToolDisplayState):
-    """Display shell tool request arguments.
-
-    Args:
-        state: Used to track the progress of printed tool command argument.
-        arguments: Tool request JSON string.
-    """
-
-    if is_complete("command", state):
-        return
-
-    if not state.get("initialized"):
-        display_text("$ ", "SPECIAL", end="")
-        state["initialized"] = True
-
-    try:
-        data = json.loads(arguments)
-    except json.JSONDecodeError as e:
-        logger.error(e)
-        return
-
-    handle_argument_display(
-        name="command",
-        state=state,
-        data=data,
-    )
-
+format_spec: FormatSpec = {
+    "prefix": "$ ",
+    "arguments": [
+        {"name": "command"},
+    ],
+}
 
 shell_tool: Tool = {
     "name": "shell",
     "description": "Execute shell command.",
     "parameters": parameter_schema,
     "function": execute_shell_command,
-    "display_arguments": display_arguments,
+    "format_spec": format_spec,
 }

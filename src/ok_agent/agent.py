@@ -14,7 +14,10 @@ from ok_agent.llama_cpp.completions import (
     NoFinishReasonError,
     completion,
 )
-from ok_agent.llama_cpp.tools import handle_tool_call, tool_to_function_tool
+from ok_agent.llama_cpp.tools import (
+    handle_tool_calls,
+    tool_to_function_tool,
+)
 from ok_agent.llama_cpp.types import (
     AssistantMessage,
     Message,
@@ -200,9 +203,6 @@ def agent(
 
     message = None
 
-    if not messages:
-        messages = [get_system_prompt()]
-
     user_message: Message = {"role": "user", "content": query}
     messages.append(user_message)
 
@@ -237,12 +237,12 @@ def agent(
             raise NoResponseError()
 
         if "tool_calls" in assistant_response:
-            tool_results = [
-                handle_tool_call(tool_registry, tool_call)
-                for tool_call in assistant_response["tool_calls"]
-            ]
-
-            messages.extend(tool_results)
+            messages.extend(
+                handle_tool_calls(
+                    tool_registry=tool_registry,
+                    tool_calls=assistant_response["tool_calls"],
+                )
+            )
 
         match finish_reason:
             case "length":
