@@ -23,23 +23,33 @@ def tool_to_function_tool(tool: Tool) -> FunctionTool:
     return function
 
 
-def handle_tool_call(
+def handle_tool_calls(
     tool_registry: ToolRegistry,
-    tool_call: MessageToolCall,
-) -> ToolMessage:
-    function = tool_call.get("function")
-    arguments_json = function.get("arguments")
-    name = function.get("name")
+    tool_calls: list[MessageToolCall],
+) -> list[ToolMessage]:
 
-    tool_content = tool_registry.execute_tool(name, arguments_json)
-    display_text(tool_content)
+    tool_messages: list[ToolMessage] = []
 
-    tool_message: ToolMessage = {
-        "role": "tool",
-        "tool_call_id": tool_call["id"],
-        "content": tool_content,
-    }
+    for tool_call in tool_calls:
+        function = tool_call.get("function")
+        arguments_json = function.get("arguments")
+        name = function.get("name")
 
-    logger.debug({**tool_message, "name": name, "arguments": arguments_json})
+        tool_content = tool_registry.execute_tool(name, arguments_json)
+        display_text(tool_content)
 
-    return tool_message
+        tool_call_id = tool_call["id"]
+
+        tool_message: ToolMessage = {
+            "role": "tool",
+            "tool_call_id": tool_call_id,
+            "content": tool_content,
+        }
+
+        tool_messages.append(tool_message)
+
+        logger.debug(
+            {**tool_message, "name": name, "arguments": arguments_json}
+        )
+
+    return tool_messages

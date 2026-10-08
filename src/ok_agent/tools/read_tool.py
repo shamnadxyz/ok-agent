@@ -2,9 +2,7 @@ import json
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.tools.types import Tool, ToolDisplayState
-from ok_agent.tools.utils import handle_argument_display, is_complete
-from ok_agent.utils import display_text
+from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -44,37 +42,16 @@ def read_file(path: str) -> str:
         return f"Type Error '{file.name}' {type(e).__name__} {e}"
 
 
-def display_arguments(arguments: str, state: ToolDisplayState):
-    """Display read tool request arguments.
-
-    Args:
-        state: Used to track the progress of printed tool arguments.
-        arguments: Tool request JSON string.
-    """
-
-    if is_complete("path", state):
-        return
-
-    if not state.get("initialized"):
-        display_text("Read ", "SPECIAL", end="")
-        state["initialized"] = True
-
-    try:
-        data = json.loads(arguments)
-    except json.JSONDecodeError as e:
-        logger.error(e)
-        return
-
-    handle_argument_display(
-        name="path",
-        state=state,
-        data=data,
-    )
-
+format_spec: FormatSpec = {
+    "prefix": "Read ",
+    "arguments": [
+        {"name": "path"},
+    ],
+}
 
 read_tool: Tool = {
     "name": "read",
     "parameters": parameter_schema,
     "function": read_file,
-    "display_arguments": display_arguments,
+    "format_spec": format_spec,
 }

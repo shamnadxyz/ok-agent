@@ -1,6 +1,7 @@
 from collections.abc import Callable
-from typing import NotRequired, Protocol, TypedDict
+from typing import NotRequired, TypedDict
 
+from ok_agent.utils import Style
 from ok_agent.validator import JSONSchema
 
 
@@ -31,8 +32,30 @@ class ToolDisplayState(TypedDict):
 type ToolDisplayStates = dict[str, ToolDisplayState]
 
 
-class DisplayArguments(Protocol):
-    def __call__(self, arguments: str, state: ToolDisplayState) -> None: ...
+class ArgumentFormat(TypedDict):
+    """Specification for the display format of the tool call arguments.
+
+    Attributes:
+        name: Argument field name.
+        style: Style to use for formatting.
+        ensure_newline: Ensure newline is printed at the end of the argument.
+    """
+
+    name: str
+    style: NotRequired[Style]
+    ensure_newline: NotRequired[bool]
+
+
+class FormatSpec(TypedDict):
+    """Specification for the display format of the tool call.
+
+    Attributes:
+        prefix: Initial text to print.
+        arguments: List of argument format specifications.
+    """
+
+    prefix: str
+    arguments: list[ArgumentFormat]
 
 
 class Tool(TypedDict):
@@ -43,11 +66,11 @@ class Tool(TypedDict):
         description: Tool description.
         parameters: JSON schema for the parameters.
         function: Function to execute.
-        display_arguments: Function to display tool request using arguments.
+        format_spec: Specification for the display format of the tool call.
     """
 
     name: str
     description: NotRequired[str]
     parameters: JSONSchema
     function: Callable
-    display_arguments: NotRequired[DisplayArguments]
+    format_spec: NotRequired[FormatSpec]

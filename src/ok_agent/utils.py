@@ -46,22 +46,17 @@ def get_system_prompt() -> SystemMessage:
 type Style = Literal["ERROR", "OK", "WARNING", "DIM", "SPECIAL"]
 
 
-def display_text(
+def format_text(
     text: str = "",
     style: Style | None = None,
     bold: bool = False,
-    end: str = "\n",
 ):
-    if end:
-        text = f"{text}{end}"
-
+    """Returns text formatted with ANSII escape sequences."""
     if bold:
         text = f"{BOLD}{text}{RESET}"
 
     if not style:
-        sys.stdout.write(text)
-        sys.stdout.flush()
-        return
+        return text
 
     match style:
         case "DIM":
@@ -74,6 +69,22 @@ def display_text(
             text = f"{YELLOW}{text}{RESET}"
         case "SPECIAL":
             text = f"{BRIGHT_BLUE}{text}{RESET}"
+
+    return text
+
+
+def display_text(
+    text: str = "",
+    style: Style | None = None,
+    bold: bool = False,
+    end: str = "\n",
+):
+    """Displays text formatted with ANSII escape sequences."""
+    if end:
+        text = f"{text}{end}"
+
+    if style or bold:
+        text = format_text(text, style, bold)
 
     sys.stdout.write(text)
     sys.stdout.flush()

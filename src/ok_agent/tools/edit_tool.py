@@ -1,11 +1,8 @@
 import difflib
-import json
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.tools.types import Tool, ToolDisplayState
-from ok_agent.tools.utils import handle_argument_display, is_complete
-from ok_agent.utils import display_text
+from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -68,54 +65,19 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
         return f"Type Error: {type(e).__name__}: {e}"
 
 
-def display_arguments(arguments: str, state: ToolDisplayState):
-    """Display edit tool request arguments.
-
-    Args:
-        state: Used to track the progress of printed tool arguments.
-        arguments: Tool request JSON string.
-    """
-
-    if (
-        is_complete("path", state)
-        and is_complete("old_text", state)
-        and is_complete("new_text", state)
-    ):
-        return
-
-    if not state.get("initialized"):
-        state["initialized"] = True
-        display_text("Edit ", "SPECIAL", end="")
-
-    try:
-        data = json.loads(arguments)
-    except json.JSONDecodeError as e:
-        logger.error(e)
-        return
-
-    handle_argument_display(
-        name="path",
-        state=state,
-        ensure_newline=True,
-        data=data,
-    )
-    handle_argument_display(
-        name="old_text",
-        style="ERROR",
-        state=state,
-        data=data,
-    )
-    handle_argument_display(
-        name="new_text",
-        style="OK",
-        state=state,
-        data=data,
-    )
+format_spec: FormatSpec = {
+    "prefix": "Edit ",
+    "arguments": [
+        {"name": "path"},
+        {"name": "old_text", "style": "ERROR"},
+        {"name": "new_text", "style": "OK"},
+    ],
+}
 
 
 edit_tool: Tool = {
     "name": "edit",
     "parameters": parameter_schema,
     "function": edit_file,
-    "display_arguments": display_arguments,
+    "format_spec": format_spec,
 }

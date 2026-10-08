@@ -11,6 +11,7 @@ from ok_agent.tools import (
     ToolDisplayStates,
     ToolNotFoundError,
 )
+from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
@@ -182,16 +183,25 @@ def display_tool_call(
 
     tool_state = tool_states[tool_call_id]
 
-    complete_arguments = rescue_partial_json(
+    completed_arguments = rescue_partial_json(
         tool_call["function"]["arguments"]
     )
 
-    if complete_arguments is None:
+    if completed_arguments is None:
         return
 
-    display_arguments = tool.get("display_arguments")
-
-    if not display_arguments:
+    try:
+        arguments = json.loads(completed_arguments)
+    except json.JSONDecodeError:
         return
 
-    display_arguments(arguments=complete_arguments, state=tool_state)
+    formatted_text = format_tool_call(
+        arguments=arguments,
+        state=tool_state,
+        tool=tool,
+    )
+
+    if not formatted_text:
+        return
+
+    display_text(formatted_text, end="")

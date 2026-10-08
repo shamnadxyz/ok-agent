@@ -172,7 +172,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
             reasoning_contents.append(reasoning_content)
         elif previously_reasoning:
             previously_reasoning = False
-            display_text()
+            if not reasoning_contents[-1].endswith("\n"):
+                display_text()
 
         if content:
             if not previously_content:
@@ -182,7 +183,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
             contents.append(content)
         elif previously_content:
             previously_content = False
-            display_text()
+            if not contents[-1].endswith("\n"):
+                display_text()
 
         if "tool_calls" in delta:
             _parse_tool_stream(
@@ -191,7 +193,7 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
                 tool_states=tool_display_states,
             )
 
-    if previously_content:
+    if previously_content and not contents[-1].endswith("\n"):
         display_text()
 
     response: Response = {"message": {"role": role or "assistant"}}
