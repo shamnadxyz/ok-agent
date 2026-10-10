@@ -292,6 +292,9 @@ def run_agent_loop(tool_registry: ToolRegistry):
         # Restore original terminal attributes
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
+        # Discard queued data on STDIN
+        termios.tcflush(fd, termios.TCIFLUSH)
+
         query = input(config.prompt_text).strip()
 
         if query.lower() == "exit":
