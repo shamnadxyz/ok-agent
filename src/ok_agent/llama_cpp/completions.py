@@ -15,12 +15,12 @@ from ok_agent.llama_cpp.types import (
 )
 from ok_agent.llama_cpp.utils import (
     build_request,
-    display_tool_call,
     get_response_error_message,
 )
 from ok_agent.tools import (
     ToolDisplayStates,
 )
+from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text
 
 trace = getLogger("llm.traces")
@@ -110,7 +110,11 @@ def _parse_tool_stream(
         if argument:
             tool_calls[idx]["function"]["arguments"] += argument
 
-        display_tool_call(tool_call=tool_calls[idx], tool_states=tool_states)
+        if formatted_text := format_tool_call(
+            tool_call=tool_calls[idx],
+            state=tool_states[function_id],
+        ):
+            display_text(formatted_text, end="")
 
 
 def _handle_stream(stream: Iterable[bytes]) -> Response:
