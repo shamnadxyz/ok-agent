@@ -22,6 +22,7 @@ CONFIG_SCHEMA: ObjectSchema = {
         "model": {"type": "string"},
         "prompt_text": {"type": "string"},
         "max_turns": {"type": "integer"},
+        "show_tool_result": {"type": "boolean"},
     },
     "required": ["api_base_url"],
     "additionalProperties": False,
@@ -37,6 +38,7 @@ class Config:
     model: str | None = None
     prompt_text: str = "> "
     max_turns: int = 15
+    show_tool_result: bool = True
 
 
 def get_config_dir() -> Path:

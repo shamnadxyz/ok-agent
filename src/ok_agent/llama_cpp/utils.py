@@ -7,9 +7,7 @@ from typing import Literal
 from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import MessageToolCall
 from ok_agent.tools import (
-    TOOL_REGISTRY,
     ToolDisplayStates,
-    ToolNotFoundError,
 )
 from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text
@@ -91,89 +89,10 @@ def get_models() -> list[str]:
         return []
 
 
-def rescue_partial_json(string: str) -> str | None:
-    """Scans through the JSON string and adds the missing closing delimiters.
-
-    Args:
-        string: incomplete JSON string.
-
-    Returns:
-        Completed JSON string or None if a closing delimiter is encountered
-        without a matching opening delimiter.
-    """
-    BRACES_OPEN = "{"
-    BRACES_CLOSE = "}"
-    BRACKET_OPEN = "["
-    BRACKET_CLOSE = "]"
-    QUOTE = '"'
-    BACKSLASH = "\\"
-
-    open_delimiters: list[str] = []
-    escape_next = False
-    in_string = False
-
-    for char in string:
-        if escape_next:
-            escape_next = False
-            continue
-
-        if char == BACKSLASH:
-            escape_next = True
-            continue
-
-        if char == QUOTE:
-            in_string = not in_string
-            continue
-
-        if in_string:
-            continue
-
-        if char == BRACES_OPEN or char == BRACKET_OPEN:
-            open_delimiters.append(char)
-        elif char == BRACES_CLOSE:
-            if not open_delimiters or open_delimiters[-1] != BRACES_OPEN:
-                return None
-            open_delimiters.pop()
-        elif char == BRACKET_CLOSE:
-            if not open_delimiters or open_delimiters[-1] != BRACKET_OPEN:
-                return None
-            open_delimiters.pop()
-
-    if in_string:
-        open_delimiters.append(QUOTE)
-
-    if not open_delimiters:
-        return string
-
-    # Add the closing delimiters
-    for char in reversed(open_delimiters):
-        if char == BRACES_OPEN:
-            string += BRACES_CLOSE
-        elif char == BRACKET_OPEN:
-            string += BRACKET_CLOSE
-        else:
-            string += QUOTE
-
-    return string
-
-
 def display_tool_call(
     tool_call: MessageToolCall, tool_states: ToolDisplayStates
 ):
     tool_call_id = tool_call["id"]
-    function = tool_call["function"]
-    tool_name = function["name"]
-
-    if not function["arguments"]:
-        return
-
-    try:
-        tools = TOOL_REGISTRY.get_tools([tool_name])
-    except ToolNotFoundError as e:
-        display_text(str(e), "ERROR")
-        return
-
-    tool = tools[0]
 
     if tool_call_id not in tool_states:
         tool_states[tool_call_id] = {
@@ -183,25 +102,9 @@ def display_tool_call(
 
     tool_state = tool_states[tool_call_id]
 
-    completed_arguments = rescue_partial_json(
-        tool_call["function"]["arguments"]
-    )
+    formatted_text = format_tool_call(tool_call=tool_call, state=tool_state)
 
-    if completed_arguments is None:
-        return
-
-    try:
-        arguments = json.loads(completed_arguments)
-    except json.JSONDecodeError:
-        return
-
-    formatted_text = format_tool_call(
-        arguments=arguments,
-        state=tool_state,
-        tool=tool,
-    )
-
-    if not formatted_text:
+    if formatted_text is None:
         return
 
     display_text(formatted_text, end="")

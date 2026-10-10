@@ -1,8 +1,10 @@
 from logging import getLogger
 
+from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import FunctionTool, MessageToolCall, ToolMessage
 from ok_agent.tools import Tool, ToolRegistry
-from ok_agent.utils import display_text
+from ok_agent.tools.utils import format_tool_call
+from ok_agent.utils import clear_lines_above, display_text
 
 logger = getLogger(__name__)
 
@@ -28,7 +30,13 @@ def handle_tool_calls(
     tool_calls: list[MessageToolCall],
 ) -> list[ToolMessage]:
 
+    config = get_config()
+
     tool_messages: list[ToolMessage] = []
+    tool_calls_map: dict[str, MessageToolCall] = {}
+
+    tool_texts: list[str] = []
+    newlines = 0
 
     for tool_call in tool_calls:
         function = tool_call.get("function")
@@ -36,7 +44,6 @@ def handle_tool_calls(
         name = function.get("name")
 
         tool_content = tool_registry.execute_tool(name, arguments_json)
-        display_text(tool_content)
 
         tool_call_id = tool_call["id"]
 
@@ -48,8 +55,26 @@ def handle_tool_calls(
 
         tool_messages.append(tool_message)
 
+        tool_calls_map[tool_call_id] = tool_call
+
         logger.debug(
             {**tool_message, "name": name, "arguments": arguments_json}
         )
+
+        formatted_text = format_tool_call(
+            tool_call=tool_call,
+            state={"initialized": False, "argument_states": {}},
+            is_final=True,
+        )
+
+        if formatted_text is not None:
+            newlines += len(formatted_text.splitlines())
+            tool_texts.append(f"{formatted_text}{tool_content}")
+
+    if config.show_tool_result:
+        clear_lines_above(count=newlines)
+
+        for text in tool_texts:
+            display_text(text)
 
     return tool_messages

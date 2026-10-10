@@ -78,7 +78,7 @@ def display_text(
     style: Style | None = None,
     bold: bool = False,
     end: str = "\n",
-):
+) -> None:
     """Displays text formatted with ANSII escape sequences."""
     if end:
         text = f"{text}{end}"
@@ -87,4 +87,15 @@ def display_text(
         text = format_text(text, style, bold)
 
     sys.stdout.write(text)
+    sys.stdout.flush()
+
+
+def clear_lines_above(count: int) -> None:
+    """Clear lines above the current cursor.
+
+    Args:
+        count: number of lines to clear above the cursor.
+    """
+    sys.stdout.write(f"\033[{count}A")
+    sys.stdout.write(f"\033[{count}M")
     sys.stdout.flush()
