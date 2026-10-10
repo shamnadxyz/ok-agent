@@ -24,7 +24,7 @@ def app():
         config = get_config()
     except ConfigError as e:
         display_text(f"{e.path}: {e.message}", "ERROR")
-        raise SystemExit()
+        raise SystemExit(1)
 
     parser = argparse.ArgumentParser(
         prog="ok-agent", description="A minimal coding agent"
@@ -74,7 +74,7 @@ def app():
             message = f"tool '{e.name}' not found"
             logger.error(message)
             display_text(message, "ERROR")
-            raise SystemExit
+            raise SystemExit(1)
 
     if args.list_tools:
         for tool in TOOL_REGISTRY.get_tools():
