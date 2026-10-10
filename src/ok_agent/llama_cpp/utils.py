@@ -5,11 +5,6 @@ from logging import getLogger
 from typing import Literal
 
 from ok_agent.config import get_config
-from ok_agent.llama_cpp.types import MessageToolCall
-from ok_agent.tools import (
-    ToolDisplayStates,
-)
-from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
@@ -87,24 +82,3 @@ def get_models() -> list[str]:
     except UnicodeDecodeError:
         logger.exception("Unicode decode error")
         return []
-
-
-def display_tool_call(
-    tool_call: MessageToolCall, tool_states: ToolDisplayStates
-):
-    tool_call_id = tool_call["id"]
-
-    if tool_call_id not in tool_states:
-        tool_states[tool_call_id] = {
-            "initialized": False,
-            "argument_states": {},
-        }
-
-    tool_state = tool_states[tool_call_id]
-
-    formatted_text = format_tool_call(tool_call=tool_call, state=tool_state)
-
-    if formatted_text is None:
-        return
-
-    display_text(formatted_text, end="")
