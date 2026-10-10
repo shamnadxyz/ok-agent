@@ -231,10 +231,9 @@ def agent(
         if (
             "content" in assistant_response
             or "tool_calls" in assistant_response
+            or "reasoning_content" in assistant_response
         ):
             messages.append(cast(AssistantMessage, assistant_response))
-        else:
-            raise NoResponseError()
 
         if "tool_calls" in assistant_response:
             messages.extend(
@@ -265,7 +264,7 @@ def agent(
         )
 
     if message is None:
-        raise NoResponseError()
+        raise NoResponseError("Model failed to produce a response")
 
     return message
 
