@@ -77,7 +77,7 @@ def _parse_tool_stream(
         function_name = tool_function.get("name")
         argument = tool_function.get("arguments")
 
-        function_id: str = tool_call.get("id")
+        function_id: str = tool_call.get("id") or tool_calls[idx]["id"]
         tool_type = tool_call.get("type")
 
         if tool_type is not None and tool_type != "function":
