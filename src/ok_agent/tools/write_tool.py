@@ -31,7 +31,7 @@ def write_file(path: str, content: str) -> str:
     try:
         file.parent.mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        return f"Failed to create directory '{file.name}' : {e}"
+        return f"Failed to create directory '{file.parent}' : {e}"
 
     try:
         file.write_text(content)
