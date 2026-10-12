@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.constants import PROGRAM_NAME
+from ok_agent.constants import PROGRAM_NAME, STATE_DIR
 from ok_agent.utils import display_text
 from ok_agent.validator import ObjectSchema
 from ok_agent.validator import validate_object as validate_config
@@ -68,8 +68,6 @@ def load_config() -> dict:
     config_dir = get_config_dir()
     config_file = config_dir / "config.json"
 
-    logger.debug(config_file)
-
     try:
         with open(config_file, "rb") as f:
             config = json.load(f)
@@ -132,3 +130,9 @@ def get_config() -> Config:
     _config_cache = Config(**config)
 
     return _config_cache
+
+
+def get_state_dir() -> Path:
+    state_dir = Path(STATE_DIR).expanduser()
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir

@@ -23,17 +23,11 @@ from ok_agent.llama_cpp.types import (
     Message,
 )
 from ok_agent.llama_cpp.utils import get_models
+from ok_agent.session import Session, save_history
 from ok_agent.tools import Tool, ToolRegistry
-from ok_agent.utils import display_text, get_system_prompt
+from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
-
-
-@dataclass
-class AppState:
-    messages: list[Message]
-    models: list[str]
-    model: str | None
 
 
 class AgentError(Exception):
@@ -84,6 +78,12 @@ class TurnLimitError(LimitError):
             f"Turn limit reached: {self.turn}/{self.turn_limit}",
             agent_response=agent_response,
         )
+
+
+@dataclass
+class AppState:
+    models: list[str]
+    session: Session
 
 
 def init_completions():
@@ -159,14 +159,14 @@ def handle_model_command(state: AppState, query: str):
         display_text("Please pass the model id")
         return
 
-    if state.model == selected_model:
+    if state.session.model == selected_model:
         return
 
     if selected_model not in state.models:
         display_text(f"model '{selected_model}' not found", "ERROR")
         return
 
-    state.model = selected_model
+    state.session.model = selected_model
     display_text(f"Selected model: {selected_model}")
 
 
@@ -269,10 +269,8 @@ def agent(
     return message
 
 
-def run_agent_loop(tool_registry: ToolRegistry):
+def run_agent_loop(tool_registry: ToolRegistry, app_state: AppState):
     config = get_config()
-
-    display_text("Ok Agent", bold=True)
 
     init_readline()
     init_completions()
@@ -283,9 +281,7 @@ def run_agent_loop(tool_registry: ToolRegistry):
     # Disable the ECHO attribute
     new[3] = new[3] & ~termios.ECHO
 
-    app_state = AppState(
-        model=config.model, models=[], messages=[get_system_prompt()]
-    )
+    atexit.register(save_history, app_state.session)
 
     while True:
         # Restore original terminal attributes
@@ -299,15 +295,21 @@ def run_agent_loop(tool_registry: ToolRegistry):
         if query.lower() == "exit":
             raise SystemExit()
 
+        if query == "":
+            continue
+
         if query.startswith("/model"):
             handle_model_command(app_state, query)
             continue
 
-        if app_state.model is None:
+        if app_state.session.model is None:
             display_text(
                 "Please select a model with /model command", "WARNING"
             )
             continue
+
+        if app_state.session.initial_query is None:
+            app_state.session.initial_query = query
 
         try:
             # Set the attributes to disable echoing of typed characters
@@ -316,8 +318,8 @@ def run_agent_loop(tool_registry: ToolRegistry):
             agent(
                 query=query,
                 tools=tool_registry.get_tools(),
-                model=app_state.model,
-                messages=app_state.messages,
+                model=app_state.session.model,
+                messages=app_state.session.messages,
                 max_turns=config.max_turns,
             )
 

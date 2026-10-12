@@ -141,7 +141,6 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     for line in stream:
         decoded_response = line.decode("utf-8", errors="ignore").strip()
-        trace.debug(decoded_response)
         if decoded_response == "":
             continue
 
