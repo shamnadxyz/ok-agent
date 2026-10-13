@@ -1,6 +1,7 @@
 import argparse
 import json
 import sqlite3
+import textwrap
 import time
 from datetime import UTC, datetime
 from logging import getLogger
@@ -225,7 +226,10 @@ def app():
             raise SystemExit(1)
 
         for entry in history:
-            display_text(f"{entry['id']}: {entry['initial_query']}")
+            short_prompt = textwrap.shorten(
+                entry["initial_query"], width=79, placeholder="..."
+            )
+            display_text(f"{entry['id']}: {short_prompt}")
         return
 
     if args.resume:
