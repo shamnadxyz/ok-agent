@@ -1,4 +1,3 @@
-import json
 from logging import getLogger
 from pathlib import Path
 
@@ -12,30 +11,50 @@ parameter_schema: JSONSchema = {
     "properties": {
         "path": {
             "type": "string",
-        }
+        },
+        "offset": {
+            "type": "integer",
+            "description": "Offset to seek in kilobytes.",
+        },
     },
     "required": ["path"],
 }
 
 
-def read_file(path: str) -> str:
+def read_file(path: str, offset: int = 0) -> str:
     file = Path(path)
+    max_kb = 50
+    max_bytes = 51200
+
+    if not file.exists():
+        return f"'{file.name}' no such file or directory"
+
+    if not (file.is_file() or file.is_symlink()):
+        return f"reading '{file.name}' is not supported"
 
     try:
-        if file.is_file() or file.is_symlink():
+        file_size = file.stat().st_size
+
+        if not file_size > max_bytes:
             return file.read_text()
-        elif file.is_dir():
-            return json.dumps(
-                {
-                    "type": "DIR",
-                    "content": [item.name for item in file.iterdir()],
-                },
-                separators=(",", ":"),
-            )
-        elif file.exists():
-            return f"reading '{file.name}' is not supported"
-        else:
-            return f"'{file.name}' no such file or directory"
+
+        with open(file) as f:
+            if offset:
+                offset_bytes = offset * 1024
+                f.seek(offset_bytes)
+
+            content = "".join(f.readlines(max_bytes))
+            next_content = f.readline()
+
+            if next_content:
+                return (
+                    f"{content}\n[Output truncated."
+                    f" file is greater than {max_kb}KB."
+                    f" Use offset {offset + max_kb} to continue.]"
+                )
+
+            return content
+
     except OSError as e:
         return f"Failed to read '{file.name}' {type(e).__name__} {e}"
     except TypeError as e:
