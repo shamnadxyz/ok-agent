@@ -15,6 +15,5 @@ A minimal cli coding agent that is built without any external packages.
 - [x] Commands
 - [x] Configuration file
 - [x] Display streaming tool arguments
-- [ ] Chat persistence
+- [x] Chat persistence
 - [ ] Handle long tool outputs
-- [ ] Compaction
