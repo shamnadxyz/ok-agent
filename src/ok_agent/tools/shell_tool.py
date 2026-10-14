@@ -63,7 +63,7 @@ guardrails = [
         "rm command is forbidden. It is very DANGEROUS. Please request the user to remove the particular item.",
     ),
     (
-        r"(^| +|;)ls +.*-R.*",
+        r"(^| +|;)ls +.*-[a-zA-Z]*R.*",
         "ls with option -R is prohibited. Please use `ls -a` to list the current directory and go from there.",
     ),
 ]
