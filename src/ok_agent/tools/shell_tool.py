@@ -32,23 +32,21 @@ def _format_process_message(
 
     if stdout:
         if isinstance(stdout, bytes):
-            messages.append(
-                stdout.decode("utf-8", errors="ignore"),
-            )
-        elif isinstance(stdout, str):
-            messages.append(stdout)
+            stdout = stdout.decode("utf-8", errors="ignore")
+
+        messages.append(stdout)
 
     if stderr:
         if isinstance(stderr, bytes):
-            messages.extend(
-                [
-                    "<stderr>",
-                    stderr.decode("utf-8", errors="ignore"),
-                    "</stderr>",
-                ]
-            )
-        elif isinstance(stderr, str):
-            messages.append(f"<stderr>{stderr}</stderr>")
+            stderr = stderr.decode("utf-8", errors="ignore")
+
+        messages.extend(
+            [
+                "<stderr>",
+                stderr,
+                "</stderr>",
+            ]
+        )
 
     messages.append(f"[exit_code:{returncode}]")
 
