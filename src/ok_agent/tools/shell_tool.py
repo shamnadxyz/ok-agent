@@ -2,6 +2,8 @@ import re
 import subprocess
 from logging import getLogger
 
+from ok_agent.constants import MAX_OUTPUT_CHARACTERS
+from ok_agent.temporary import temporary
 from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
@@ -22,25 +24,35 @@ parameter_schema: JSONSchema = {
 }
 
 
-def _format_process_message(
+def handle_output(
     stdout: str | bytes | None,
     stderr: str | bytes | None,
-    returncode: int | None = None,
+    exit_code: int | None = None,
 ) -> str:
+    """Returns formatted process response.
 
-    messages = []
+    Format message with xml block if stderr is in output.
+    Handle long process output saving it to a file and the info in the message.
+    Adds the exit code to the end of the message.
+
+    Args:
+        stdout: content from stdout.
+        stderr: content from stderr.
+        exit_code: exit code of the process.
+    """
+    lines = []
 
     if stdout:
         if isinstance(stdout, bytes):
             stdout = stdout.decode("utf-8", errors="ignore")
 
-        messages.append(stdout)
+        lines.append(stdout)
 
     if stderr:
         if isinstance(stderr, bytes):
             stderr = stderr.decode("utf-8", errors="ignore")
 
-        messages.extend(
+        lines.extend(
             [
                 "<stderr>",
                 stderr,
@@ -48,9 +60,33 @@ def _format_process_message(
             ]
         )
 
-    messages.append(f"[exit_code:{returncode}]")
+    message = "\n".join(lines)
 
-    return "\n".join(messages)
+    if len(message) < MAX_OUTPUT_CHARACTERS:
+        if exit_code is None:
+            return message
+        return f"{message}\n[exit_code:{exit_code}]"
+
+    try:
+        temp_file = temporary.create_temp_file()
+        temp_file.write_text(message)
+
+        with open(temp_file) as f:
+            formatted_text = f.read(MAX_OUTPUT_CHARACTERS)
+
+            if exit_code is not None:
+                formatted_text = f"{formatted_text}\n[exit_code:{exit_code}]"
+
+            return (
+                f"{formatted_text}\n[Output truncated."
+                f" Full output saved to '{temp_file}'."
+                f" Read with offset {f.tell()} to continue.]"
+            )
+
+    except OSError:
+        logger.exception("Failed to create tempfile")
+
+        return f"{message[:MAX_OUTPUT_CHARACTERS]}\n[Output got truncated]"
 
 
 guardrails = [
@@ -90,14 +126,14 @@ def execute_shell_command(command: str, timeout: int = 10) -> str:
             check=False,
         )
 
-        return _format_process_message(
+        return handle_output(
             stdout=result.stdout,
             stderr=result.stderr,
-            returncode=result.returncode,
+            exit_code=result.returncode,
         )
 
     except subprocess.TimeoutExpired as e:
-        return _format_process_message(
+        return handle_output(
             stdout=e.stdout,
             stderr=e.stderr,
         )

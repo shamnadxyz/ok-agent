@@ -1,6 +1,7 @@
 from logging import getLogger
 from pathlib import Path
 
+from ok_agent.constants import MAX_OUTPUT_CHARACTERS
 from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
@@ -14,17 +15,32 @@ parameter_schema: JSONSchema = {
         },
         "offset": {
             "type": "integer",
-            "description": "Offset to seek in kilobytes.",
+            "description": "Content position start.",
+        },
+        "max_chars": {
+            "type": "integer",
+            "description": "Maximum character limit.",
         },
     },
     "required": ["path"],
 }
 
 
-def read_file(path: str, offset: int = 0) -> str:
+def read_file(
+    path: str,
+    offset: int = 0,
+    max_chars: int = MAX_OUTPUT_CHARACTERS,
+) -> str:
+    """Read file content.
+
+    Truncates file content greater than MAX_OUTPUT_CHARACTERS.
+
+    Args:
+        path: path to the file.
+        offset: read position.
+        max_chars: Maximum character limit.
+    """
     file = Path(path)
-    max_kb = 50
-    max_bytes = 51200
 
     if not file.exists():
         return f"'{file.name}' no such file or directory"
@@ -33,24 +49,19 @@ def read_file(path: str, offset: int = 0) -> str:
         return f"reading '{file.name}' is not supported"
 
     try:
-        file_size = file.stat().st_size
-
-        if not file_size > max_bytes:
-            return file.read_text()
-
         with open(file) as f:
             if offset:
-                offset_bytes = offset * 1024
-                f.seek(offset_bytes)
+                f.seek(offset)
 
-            content = "".join(f.readlines(max_bytes))
-            next_content = f.readline()
+            content = f.read(max_chars)
+
+            next_content = f.read(1)
 
             if next_content:
+                end = f.tell() - 1
                 return (
-                    f"{content}\n[Output truncated."
-                    f" file is greater than {max_kb}KB."
-                    f" Use offset {offset + max_kb} to continue.]"
+                    f"{content}\n[Showing {offset}-{end}."
+                    f" Read with offset {f.tell()} to continue.]"
                 )
 
             return content

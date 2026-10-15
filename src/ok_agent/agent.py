@@ -2,7 +2,6 @@ import atexit
 import readline
 import sys
 import termios
-from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 from typing import cast
@@ -80,12 +79,6 @@ class TurnLimitError(LimitError):
         )
 
 
-@dataclass
-class AppState:
-    models: list[str]
-    session: Session
-
-
 def init_completions():
     commands = ["/model"]
     model_completions = []
@@ -149,9 +142,8 @@ def get_model_completions() -> list[str]:
     return [f"/model {model}" for model in get_models()]
 
 
-def handle_model_command(state: AppState, query: str):
-    if not state.models:
-        state.models = get_models()
+def handle_model_command(session: Session, query: str):
+    models = get_models()
 
     selected_model = query.removeprefix("/model").strip()
 
@@ -159,14 +151,14 @@ def handle_model_command(state: AppState, query: str):
         display_text("Please pass the model id")
         return
 
-    if state.session.model == selected_model:
+    if session.model == selected_model:
         return
 
-    if selected_model not in state.models:
+    if selected_model not in models:
         display_text(f"model '{selected_model}' not found", "ERROR")
         return
 
-    state.session.model = selected_model
+    session.model = selected_model
     display_text(f"Selected model: {selected_model}")
 
 
@@ -269,7 +261,7 @@ def agent(
     return message
 
 
-def run_agent_loop(tool_registry: ToolRegistry, app_state: AppState):
+def run_agent_loop(tool_registry: ToolRegistry, session: Session):
     config = get_config()
 
     init_readline()
@@ -281,7 +273,7 @@ def run_agent_loop(tool_registry: ToolRegistry, app_state: AppState):
     # Disable the ECHO attribute
     new[3] = new[3] & ~termios.ECHO
 
-    atexit.register(save_history, app_state.session)
+    atexit.register(save_history, session)
 
     while True:
         # Restore original terminal attributes
@@ -299,17 +291,17 @@ def run_agent_loop(tool_registry: ToolRegistry, app_state: AppState):
             continue
 
         if query.startswith("/model"):
-            handle_model_command(app_state, query)
+            handle_model_command(session, query)
             continue
 
-        if app_state.session.model is None:
+        if session.model is None:
             display_text(
                 "Please select a model with /model command", "WARNING"
             )
             continue
 
-        if app_state.session.initial_query is None:
-            app_state.session.initial_query = query
+        if session.initial_query is None:
+            session.initial_query = query
 
         try:
             # Set the attributes to disable echoing of typed characters
@@ -318,8 +310,8 @@ def run_agent_loop(tool_registry: ToolRegistry, app_state: AppState):
             agent(
                 query=query,
                 tools=tool_registry.get_tools(),
-                model=app_state.session.model,
-                messages=app_state.session.messages,
+                model=session.model,
+                messages=session.messages,
                 max_turns=config.max_turns,
             )
 
