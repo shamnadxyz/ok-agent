@@ -1,6 +1,7 @@
 import json
 import urllib.error
 import urllib.request
+from functools import lru_cache
 from logging import getLogger
 from typing import Literal
 
@@ -49,19 +50,26 @@ def build_request(
     return request
 
 
-def get_models() -> list[str]:
+@lru_cache(maxsize=1)
+def _fetch_models() -> list[str]:
     request = build_request(endpoint="/models")
+    with urllib.request.urlopen(request) as response:
+        data = json.loads(response.read().decode("utf-8"))
 
+        logger.debug(data)
+
+        if "data" not in data:
+            raise KeyError("data not found")
+
+        return [entry["id"] for entry in data["data"] if "id" in entry]
+
+
+def get_models() -> list[str]:
     try:
-        with urllib.request.urlopen(request) as response:
-            data = json.loads(response.read().decode("utf-8"))
+        return _fetch_models()
 
-            logger.debug(data)
-
-            if "data" not in data:
-                return []
-
-            return [entry["id"] for entry in data["data"] if "id" in entry]
+    except TypeError as e:
+        logger.error(e)
     except urllib.error.HTTPError as e:
         message = e.reason
         error_message = get_response_error_message(e)
@@ -72,13 +80,11 @@ def get_models() -> list[str]:
         logger.exception(message)
         display_text(f"\n{message}", "ERROR")
 
-        return []
     except urllib.error.URLError as e:
         logger.exception(f"{e.reason}")
-        return []
     except json.JSONDecodeError:
         logger.exception("JSON decode error")
-        return []
     except UnicodeDecodeError:
         logger.exception("Unicode decode error")
-        return []
+
+    return []

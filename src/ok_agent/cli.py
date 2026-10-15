@@ -1,4 +1,5 @@
 import argparse
+import atexit
 import json
 import sqlite3
 import textwrap
@@ -8,7 +9,6 @@ from logging import getLogger
 from pathlib import Path
 
 from ok_agent.agent import (
-    AppState,
     Session,
     run_agent_loop,
 )
@@ -20,6 +20,7 @@ from ok_agent.session import (
     find_sessions,
     get_previous_session,
 )
+from ok_agent.temporary import temporary
 from ok_agent.tools import (
     TOOL_REGISTRY,
     ToolNotFoundError,
@@ -130,11 +131,6 @@ def app():
         messages=[get_system_prompt()],
     )
 
-    app_state = AppState(
-        models=[],
-        session=session,
-    )
-
     parser = argparse.ArgumentParser(
         prog="ok-agent", description="A minimal coding agent"
     )
@@ -233,7 +229,7 @@ def app():
         return
 
     if args.resume:
-        app_state.session.is_resume = True
+        session.is_resume = True
         try:
             if args.resume == -1:
                 prev_session = get_previous_session()
@@ -251,25 +247,26 @@ def app():
         history_file = Path(prev_session["history_path"])
 
         try:
-            app_state.session.messages = read_history_file(history_file)
-            app_state.session.history_path = history_file
+            session.messages = read_history_file(history_file)
+            session.history_path = history_file
         except HistoryReadError as e:
             logger.exception("Failed to read history")
             display_text(str(e), style="ERROR")
             raise SystemExit(1)
         prev_model = prev_session.get("model")
         if prev_model:
-            app_state.session.model = prev_model
+            session.model = prev_model
 
     display_text("Ok Agent", bold=True)
 
-    if app_state.session.is_resume:
-        replay_history(app_state.session.messages)
+    if session.is_resume:
+        replay_history(session.messages)
 
+    atexit.register(temporary.remove_temp_files)
     try:
         run_agent_loop(
             tool_registry=TOOL_REGISTRY,
-            app_state=app_state,
+            session=session,
         )
     except (EOFError, SystemExit, KeyboardInterrupt):
         display_text("\nExited")
