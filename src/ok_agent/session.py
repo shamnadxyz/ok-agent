@@ -127,14 +127,17 @@ def find_session(id: int) -> SessionMetadata | None:
 def get_previous_session() -> SessionMetadata | None:
     """Returns the previous session."""
     connection = get_db_connection()
+    cwd = str(Path.cwd().resolve())
 
     with closing(connection) as con, con:
         cursor = con.execute(
             """
             SELECT *
             FROM session_metadata
+            WHERE project_path = ?
             ORDER BY created_at DESC
             LIMIT 1;
             """,
+            (cwd,),
         )
         return cursor.fetchone()
