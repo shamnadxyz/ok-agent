@@ -25,9 +25,6 @@ parameter_schema: JSONSchema = {
 def write_file(path: str, content: str) -> str:
     file = Path(path)
 
-    if file.exists():
-        return f"{file.name} already exists. Cannot overwrite files. Please use edit tool"
-
     try:
         file.parent.mkdir(parents=True, exist_ok=True)
     except OSError as e:
@@ -52,7 +49,7 @@ format_spec: FormatSpec = {
 
 write_tool: Tool = {
     "name": "write",
-    "description": "Write a new file. Parent dirs are created if missing. Cannot overwrite files.",
+    "description": "Write to a file. Parent dirs are created if missing.",
     "parameters": parameter_schema,
     "function": write_file,
     "format_spec": format_spec,
