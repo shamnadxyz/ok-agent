@@ -50,12 +50,7 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
 
     try:
         file.write_text(updated_content, encoding="utf-8")
-        return "".join(
-            difflib.unified_diff(
-                file_content.splitlines(keepends=True),
-                updated_content.splitlines(keepends=True),
-            )
-        )
+        return f"edit success: '{file.name}'"
 
     except OSError as e:
         return (
