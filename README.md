@@ -1,19 +1,28 @@
 # Ok Agent
 
-A minimal cli coding agent that is built without any external packages.
+A minimal CLI coding agent with **zero external package dependencies**.
 
-## Tools
+## Features
 
-- Read
-- Write
-- Edit
-- Shell
+### Tools
 
-## Alpha Release Milestone
+- **Read**: Read file. Large files truncated by a character limit.
+- **Write**: Write and overwrite files.
+- **Edit**: Edit file by exact text replacement.
+- **Shell**: Execute shell commands. Handles large outputs by saving to a temp file and does cleanup at exit.
 
-- [x] JSON schema validation for tools
-- [x] Commands
-- [x] Configuration file
-- [x] Display streaming tool arguments
-- [x] Chat persistence
-- [x] Handle long tool outputs
+### Sessions
+
+- Scoped to working directory.
+- Message history is saved in `~/.local/state/ok/history` as jsonl files.
+- Resume sessions using `ok -r`, which by default resumes the previous session in the current working directory.
+
+## Configuration
+
+[Example configuration](./examples/config.json)
+
+## Limitations
+
+- No Compaction.
+- No MCP support.
+- Synchronous.
