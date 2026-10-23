@@ -45,8 +45,6 @@ def build_request(
     if config.api_key:
         request.add_header("Authorization", f"Bearer {config.api_key}")
 
-    logger.debug(f"Request URL: {request.full_url}")
-
     return request
 
 
@@ -56,7 +54,7 @@ def _fetch_models() -> list[str]:
     with urllib.request.urlopen(request) as response:
         data = json.loads(response.read().decode("utf-8"))
 
-        logger.debug(data)
+        logger.debug(f"models: {data}")
 
         if "data" not in data:
             raise KeyError("data not found")

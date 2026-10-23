@@ -201,15 +201,15 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     response: Response = {"message": {"role": role or "assistant"}}
 
+    if reasoning_contents and config.preserve_reasoning:
+        response["message"]["reasoning_content"] = "".join(reasoning_contents)
+
     if contents:
         content = "".join(contents)
         response["message"]["content"] = content
 
     if tool_calls:
         response["message"]["tool_calls"] = tool_calls
-
-    if reasoning_contents and config.preserve_reasoning:
-        response["message"]["reasoning_content"] = "".join(reasoning_contents)
 
     if not finish_reason:
         raise NoFinishReasonError("No finish reason", response)
@@ -226,11 +226,19 @@ def completion(
     messages: list[Message],
     tools: list[FunctionTool],
     timeout: int = 300,
+    chat_template_kwargs: dict | None = None,
 ) -> Response:
     """Sends completion request to messages to llama-cpp server.
 
+    Args:
+        model: Model ID.
+        messages: Message history.
+        tools: Tools available to the model.
+        timeout: Timeout in seconds.
+        chat_template_kwargs: Arguments to the chat template.
+
     Returns:
-        Response with CompletionMessage and finish_reason
+        Response with AssistantMessage and finish_reason
 
     Raises:
         CompletionError: if HTTPError occured
@@ -239,21 +247,28 @@ def completion(
     """
     completions_endpoint = "/chat/completions"
 
+    payload = {
+        "model": model,
+        "stream": True,
+        "tools": tools,
+        "messages": messages,
+        "chat_template_kwargs": chat_template_kwargs,
+    }
+
     data = json.dumps(
-        {
-            "model": model,
-            "stream": True,
-            "tools": tools,
-            "messages": messages,
-        },
+        payload,
         ensure_ascii=False,
         separators=(",", ":"),
         allow_nan=False,
-    ).encode()
+    )
 
-    logger.debug(f"Request data: {data}")
+    logger.debug(f"data: {data}")
 
-    request = build_request(completions_endpoint, data, method="POST")
+    request = build_request(
+        completions_endpoint,
+        data.encode("utf-8"),
+        method="POST",
+    )
     request.add_header("Content-Type", "application/json")
 
     try:
