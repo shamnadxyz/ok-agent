@@ -17,7 +17,7 @@ parameter_schema: JSONSchema = {
         },
         "timeout": {
             "type": "number",
-            "description": "command timeout (default: 10)",
+            "description": "command timeout in seconds (default: 10)",
         },
     },
     "required": ["command"],
@@ -27,7 +27,7 @@ parameter_schema: JSONSchema = {
 def handle_output(
     stdout: str | bytes | None,
     stderr: str | bytes | None,
-    exit_code: int | None = None,
+    prefix: str | None = None,
 ) -> str:
     """Returns formatted process response.
 
@@ -41,6 +41,9 @@ def handle_output(
         exit_code: exit code of the process.
     """
     lines = []
+
+    if prefix:
+        lines.append(prefix)
 
     if stdout:
         if isinstance(stdout, bytes):
@@ -63,9 +66,7 @@ def handle_output(
     message = "\n".join(lines)
 
     if len(message) < MAX_OUTPUT_CHARACTERS:
-        if exit_code is None:
-            return message
-        return f"{message}\n[exit_code:{exit_code}]"
+        return message
 
     try:
         temp_file = temporary.create_temp_file()
@@ -73,9 +74,6 @@ def handle_output(
 
         with open(temp_file) as f:
             formatted_text = f.read(MAX_OUTPUT_CHARACTERS)
-
-            if exit_code is not None:
-                formatted_text = f"{formatted_text}\n[exit_code:{exit_code}]"
 
             return (
                 f"{formatted_text}\n[Output truncated."
@@ -129,13 +127,14 @@ def execute_shell_command(command: str, timeout: int = 10) -> str:
         return handle_output(
             stdout=result.stdout,
             stderr=result.stderr,
-            exit_code=result.returncode,
+            prefix=f"Exit code: {result.returncode}",
         )
 
     except subprocess.TimeoutExpired as e:
         return handle_output(
             stdout=e.stdout,
             stderr=e.stderr,
+            prefix=f"Timeout expired: {timeout}",
         )
 
     except FileNotFoundError:
