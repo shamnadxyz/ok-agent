@@ -4,7 +4,6 @@ import sys
 import termios
 from logging import getLogger
 from pathlib import Path
-from typing import cast
 from urllib.error import URLError
 
 from ok_agent.config import get_config
@@ -15,15 +14,14 @@ from ok_agent.llama_cpp.completions import (
 )
 from ok_agent.llama_cpp.tools import (
     handle_tool_calls,
-    tool_to_function_tool,
+    tools_to_function_tools,
 )
 from ok_agent.llama_cpp.types import (
-    AssistantMessage,
     Message,
 )
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.session import Session, save_history
-from ok_agent.tools import Tool, ToolRegistry
+from ok_agent.tools import ToolRegistry
 from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
@@ -47,10 +45,8 @@ class LimitError(AgentError):
     def __init__(
         self,
         message: str,
-        agent_response: str | None = None,
     ):
         super().__init__(message)
-        self.agent_response = agent_response
 
 
 class TokenLimitError(LimitError):
@@ -68,14 +64,12 @@ class TurnLimitError(LimitError):
         self,
         turn: int,
         turn_limit: int,
-        agent_response: str | None = None,
     ):
         self.turn = turn
         self.turn_limit = turn_limit
 
         super().__init__(
             f"Turn limit reached: {self.turn}/{self.turn_limit}",
-            agent_response=agent_response,
         )
 
 
@@ -164,18 +158,20 @@ def handle_model_command(session: Session, query: str):
 
 def agent(
     query: str,
-    tools: list[Tool],
+    tool_registry: ToolRegistry,
     model: str,
     messages: list[Message],
+    preserve_reasoning: bool,
     max_turns: int = 15,
 ) -> str:
     """Send query to the agent.
 
     Args:
         query: Query to send.
-        tools: List of available tools to the agent.
+        tool_registry: Tool registry available to the agent.
         model: Model ID.
         messages: The agent's message history.
+        preserve_reasoning: whether to send back the reasoning content.
         max_turns: The maximum number of turns.
 
     Returns:
@@ -188,9 +184,7 @@ def agent(
         TokenLimitError: if the maximum token limit is reached.
         URLError
     """
-
-    tool_registry = ToolRegistry(tools)
-    function_tools = [tool_to_function_tool(tool) for tool in tools]
+    function_tools = tools_to_function_tools(tool_registry)
     turn = 0
 
     message = None
@@ -198,21 +192,21 @@ def agent(
     user_message: Message = {"role": "user", "content": query}
     messages.append(user_message)
 
+    kwargs = {
+        "preserve_thinking": preserve_reasoning,
+    }
+
     while turn < max_turns:
         try:
             response = completion(
                 model=model,
                 messages=messages,
                 tools=function_tools,
+                chat_template_kwargs=kwargs,
             )
             finish_reason = response["finish_reason"]
         except NoFinishReasonError as e:
-            response = e.response
-            finish_reason = None
-        except CompletionError:
-            raise
-        except URLError:
-            raise
+            raise CompletionError("finish_reason missing") from e
 
         assistant_response = response["message"]
 
@@ -220,39 +214,35 @@ def agent(
         if "content" in assistant_response:
             message = assistant_response["content"]
 
-        if (
-            "content" in assistant_response
-            or "tool_calls" in assistant_response
-            or "reasoning_content" in assistant_response
-        ):
-            messages.append(cast(AssistantMessage, assistant_response))
+        if finish_reason == "stop":
+            if "content" not in assistant_response:
+                raise CompletionError("missing content")
 
-        if "tool_calls" in assistant_response:
+            messages.append(assistant_response)
+            break
+
+        elif finish_reason == "tool_calls":
+            if "tool_calls" not in assistant_response:
+                raise CompletionError("missing tool_calls")
+
+            messages.append(assistant_response)
             messages.extend(
                 handle_tool_calls(
                     tool_registry=tool_registry,
                     tool_calls=assistant_response["tool_calls"],
                 )
             )
+        elif finish_reason == "length":
+            raise TokenLimitError(
+                "Maximum token limit reached",
+            )
 
-        match finish_reason:
-            case "length":
-                raise TokenLimitError(
-                    "Maximum token limit reached", agent_response=message
-                )
-            case "stop":
-                break
-            case "tool_calls":
-                pass
-            case None:
-                break
         turn += 1
 
     if turn >= max_turns:
         raise TurnLimitError(
             turn=turn,
             turn_limit=max_turns,
-            agent_response=message,
         )
 
     if message is None:
@@ -309,10 +299,11 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
 
             agent(
                 query=query,
-                tools=tool_registry.get_tools(),
+                tool_registry=tool_registry,
                 model=session.model,
                 messages=session.messages,
                 max_turns=config.max_turns,
+                preserve_reasoning=config.preserve_reasoning,
             )
 
         except LimitError as e:

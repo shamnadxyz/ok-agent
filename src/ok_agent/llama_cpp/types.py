@@ -60,13 +60,6 @@ class ToolMessage(TypedDict):
 
 class AssistantMessage(TypedDict):
     role: Literal["assistant"]
-    content: NotRequired[Content]
-    reasoning_content: NotRequired[str]
-    tool_calls: NotRequired[list[MessageToolCall]]
-
-
-class CompletionMessage(TypedDict):
-    role: Literal["assistant"]
     content: NotRequired[str]
     reasoning_content: NotRequired[str]
     tool_calls: NotRequired[list[MessageToolCall]]
@@ -76,5 +69,5 @@ type Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage
 
 
 class Response(TypedDict, total=False):
-    message: CompletionMessage
+    message: AssistantMessage
     finish_reason: FinishReason

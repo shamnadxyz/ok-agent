@@ -78,6 +78,11 @@ def replay_history(messages: list[Message]):
                 if isinstance(content, str):
                     display_text(f"{config.prompt_text}", "SPECIAL", end="")
                     display_text(content)
+                elif isinstance(content, list):
+                    display_text(f"{config.prompt_text}", "SPECIAL", end="")
+                    for part in content:
+                        if "text" in part:
+                            display_text(part["text"], end="")
 
             case "tool":
                 tool_id = message["tool_call_id"]
@@ -94,8 +99,13 @@ def replay_history(messages: list[Message]):
                     continue
 
                 display_text(formatted_text, end="")
-                if config.show_tool_result and isinstance(content, str):
-                    display_text(content)
+                if config.show_tool_result:
+                    if isinstance(content, str):
+                        display_text(content)
+                    elif isinstance(content, list):
+                        for part in content:
+                            if "text" in part:
+                                display_text(part["text"])
 
             case "assistant":
                 reasoning = message.get("reasoning_content")
@@ -119,6 +129,8 @@ def app():
 
     try:
         config = get_config()
+        logger.debug(f"config: {config}")
+
     except ConfigError as e:
         display_text(f"{e.path}: {e.message}", "ERROR")
         raise SystemExit(1)
