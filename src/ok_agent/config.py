@@ -102,7 +102,7 @@ def load_config() -> dict:
         )
 
         config_json = json.dumps(vars(default_config), indent=2)
-        config_file.write_text(config_json)
+        config_file.write_text(config_json, encoding="utf-8")
 
         return load_config()
 

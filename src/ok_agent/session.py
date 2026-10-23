@@ -75,7 +75,7 @@ def save_history(session: Session) -> None:
         return
 
     messages_jsonl = [json.dumps(message) for message in session.messages]
-    session.history_path.write_text("\n".join(messages_jsonl))
+    session.history_path.write_text("\n".join(messages_jsonl), encoding="utf-8")
 
     if not session.is_resume:
         _save_session(session)

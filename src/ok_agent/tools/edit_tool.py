@@ -32,7 +32,7 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
     if not file.exists():
         return f"File '{file.name}' does not exists"
 
-    file_content = file.read_text()
+    file_content = file.read_text(encoding="utf-8")
 
     if old_text == new_text:
         return "old_text and new_text cannot be the same"
