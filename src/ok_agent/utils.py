@@ -1,5 +1,6 @@
 import sys
 import textwrap
+from functools import lru_cache
 from logging import getLogger
 from pathlib import Path
 from typing import Literal
@@ -8,10 +9,10 @@ from ok_agent.ansi_sequences import (
     BOLD,
     BRIGHT_BLUE,
     BRIGHT_GRAY,
-    GREEN,
-    RED,
+    BRIGHT_GREEN,
+    BRIGHT_RED,
+    BRIGHT_YELLOW,
     RESET,
-    YELLOW,
 )
 from ok_agent.llama_cpp.types import ContentPartText, SystemMessage
 
@@ -46,12 +47,20 @@ def get_system_prompt() -> SystemMessage:
 type Style = Literal["ERROR", "OK", "WARNING", "DIM", "SPECIAL"]
 
 
+@lru_cache(maxsize=1)
+def _isatty():
+    return sys.stdout.isatty()
+
+
 def format_text(
     text: str = "",
     style: Style | None = None,
     bold: bool = False,
 ):
     """Returns text formatted with ANSII escape sequences."""
+    if not _isatty():
+        return text
+
     if bold:
         text = f"{BOLD}{text}{RESET}"
 
@@ -62,11 +71,11 @@ def format_text(
         case "DIM":
             text = f"{BRIGHT_GRAY}{text}{RESET}"
         case "ERROR":
-            text = f"{RED}{text}{RESET}"
+            text = f"{BRIGHT_RED}{text}{RESET}"
         case "OK":
-            text = f"{GREEN}{text}{RESET}"
+            text = f"{BRIGHT_GREEN}{text}{RESET}"
         case "WARNING":
-            text = f"{YELLOW}{text}{RESET}"
+            text = f"{BRIGHT_YELLOW}{text}{RESET}"
         case "SPECIAL":
             text = f"{BRIGHT_BLUE}{text}{RESET}"
 
