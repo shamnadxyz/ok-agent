@@ -51,7 +51,7 @@ def build_request(
 @lru_cache(maxsize=1)
 def _fetch_models() -> list[str]:
     request = build_request(endpoint="/models")
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, timeout=5) as response:
         data = json.loads(response.read().decode("utf-8"))
 
         logger.debug(f"models: {data}")
@@ -84,5 +84,7 @@ def get_models() -> list[str]:
         logger.exception("JSON decode error")
     except UnicodeDecodeError:
         logger.exception("Unicode decode error")
+    except TimeoutError:
+        pass
 
     return []
