@@ -35,7 +35,7 @@ def get_system_prompt() -> SystemMessage:
 
     if agents.exists():
         try:
-            content = agents.read_text()
+            content = agents.read_text(encoding="utf-8")
             system_message.append({"type": "text", "text": content})
         except (OSError, ValueError):
             logger.exception("Error in reading AGENTS.md file")

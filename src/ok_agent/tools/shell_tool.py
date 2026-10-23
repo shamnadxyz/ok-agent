@@ -69,7 +69,7 @@ def handle_output(
 
     try:
         temp_file = temporary.create_temp_file()
-        temp_file.write_text(message)
+        temp_file.write_text(message, encoding="utf-8")
 
         with open(temp_file) as f:
             formatted_text = f.read(MAX_OUTPUT_CHARACTERS)

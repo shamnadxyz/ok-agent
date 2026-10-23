@@ -31,7 +31,7 @@ def write_file(path: str, content: str) -> str:
         return f"Failed to create directory '{file.parent}' : {e}"
 
     try:
-        file.write_text(content)
+        file.write_text(content, encoding="utf-8")
         return f"write success: '{path}'"
     except OSError as e:
         return f"Failed to write file '{file.name}' {type(e).__name__} {e}"
