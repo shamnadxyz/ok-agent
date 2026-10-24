@@ -20,12 +20,12 @@ logger = getLogger(__name__)
 
 
 def get_system_prompt() -> SystemMessage:
-    agents = Path("AGENTS.md")
+    agents = Path('AGENTS.md')
 
     system_message: Content = [
         {
-            "type": "text",
-            "text": textwrap.dedent(f"""\
+            'type': 'text',
+            'text': textwrap.dedent(f"""\
                 You are a helpful coding agent. 
 
                 cwd:"{Path.cwd()}"
@@ -36,15 +36,15 @@ def get_system_prompt() -> SystemMessage:
 
     if agents.exists():
         try:
-            content = agents.read_text(encoding="utf-8")
-            system_message.append({"type": "text", "text": content})
+            content = agents.read_text(encoding='utf-8')
+            system_message.append({'type': 'text', 'text': content})
         except (OSError, ValueError):
-            logger.exception("Error in reading AGENTS.md file")
+            logger.exception('Error in reading AGENTS.md file')
 
-    return {"role": "system", "content": system_message}
+    return {'role': 'system', 'content': system_message}
 
 
-type Style = Literal["ERROR", "OK", "WARNING", "DIM", "SPECIAL"]
+type Style = Literal['ERROR', 'OK', 'WARNING', 'DIM', 'SPECIAL']
 
 
 @lru_cache(maxsize=1)
@@ -53,7 +53,7 @@ def _isatty():
 
 
 def format_text(
-    text: str = "",
+    text: str = '',
     style: Style | None = None,
     bold: bool = False,
 ):
@@ -62,35 +62,35 @@ def format_text(
         return text
 
     if bold:
-        text = f"{BOLD}{text}{RESET}"
+        text = f'{BOLD}{text}{RESET}'
 
     if not style:
         return text
 
     match style:
-        case "DIM":
-            text = f"{BRIGHT_GRAY}{text}{RESET}"
-        case "ERROR":
-            text = f"{BRIGHT_RED}{text}{RESET}"
-        case "OK":
-            text = f"{BRIGHT_GREEN}{text}{RESET}"
-        case "WARNING":
-            text = f"{BRIGHT_YELLOW}{text}{RESET}"
-        case "SPECIAL":
-            text = f"{BRIGHT_BLUE}{text}{RESET}"
+        case 'DIM':
+            text = f'{BRIGHT_GRAY}{text}{RESET}'
+        case 'ERROR':
+            text = f'{BRIGHT_RED}{text}{RESET}'
+        case 'OK':
+            text = f'{BRIGHT_GREEN}{text}{RESET}'
+        case 'WARNING':
+            text = f'{BRIGHT_YELLOW}{text}{RESET}'
+        case 'SPECIAL':
+            text = f'{BRIGHT_BLUE}{text}{RESET}'
 
     return text
 
 
 def display_text(
-    text: str = "",
+    text: str = '',
     style: Style | None = None,
     bold: bool = False,
-    end: str = "\n",
+    end: str = '\n',
 ) -> None:
     """Displays text formatted with ANSII escape sequences."""
     if end:
-        text = f"{text}{end}"
+        text = f'{text}{end}'
 
     if style or bold:
         text = format_text(text, style, bold)
@@ -106,6 +106,6 @@ def clear_lines_above(count: int) -> None:
         count: number of lines to clear above the cursor.
     """
     for _ in range(count):
-        sys.stdout.write("\033[1A")
-        sys.stdout.write("\033[2K")
+        sys.stdout.write('\033[1A')
+        sys.stdout.write('\033[2K')
     sys.stdout.flush()

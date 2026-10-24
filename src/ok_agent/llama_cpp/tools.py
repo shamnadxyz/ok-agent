@@ -16,15 +16,15 @@ def tools_to_function_tools(tool_registry: ToolRegistry) -> list[FunctionTool]:
 
     for tool in tools:
         function: FunctionTool = {
-            "type": "function",
-            "function": {
-                "name": tool["name"],
-                "parameters": tool["parameters"],
+            'type': 'function',
+            'function': {
+                'name': tool['name'],
+                'parameters': tool['parameters'],
             },
         }
 
-        if "description" in tool:
-            function["function"]["description"] = tool["description"]
+        if 'description' in tool:
+            function['function']['description'] = tool['description']
 
         function_tools.append(function)
 
@@ -44,29 +44,27 @@ def handle_tool_calls(
     newlines = 0
 
     for tool_call in tool_calls:
-        function = tool_call.get("function")
-        arguments_json = function.get("arguments")
-        name = function.get("name")
+        function = tool_call.get('function')
+        arguments_json = function.get('arguments')
+        name = function.get('name')
 
         tool_content = tool_registry.execute_tool(name, arguments_json)
 
-        tool_call_id = tool_call["id"]
+        tool_call_id = tool_call['id']
 
         tool_message: ToolMessage = {
-            "role": "tool",
-            "tool_call_id": tool_call_id,
-            "content": tool_content,
+            'role': 'tool',
+            'tool_call_id': tool_call_id,
+            'content': tool_content,
         }
 
         tool_messages.append(tool_message)
 
-        logger.debug(
-            {**tool_message, "name": name, "arguments": arguments_json}
-        )
+        logger.debug({**tool_message, 'name': name, 'arguments': arguments_json})
 
         formatted_tool_args = format_tool_call(
             tool_call=tool_call,
-            state={"initialized": False, "argument_states": {}},
+            state={'initialized': False, 'argument_states': {}},
             is_final=True,
         )
 
@@ -76,13 +74,13 @@ def handle_tool_calls(
             if isinstance(tool_content, str):
                 text_content = tool_content
             else:
-                text_content = "".join(
-                    content["text"]
+                text_content = ''.join(
+                    content['text']
                     for content in tool_content
-                    if content["type"] == "text"
+                    if content['type'] == 'text'
                 )
 
-            formatted_tool_call = f"{formatted_tool_args}{text_content}"
+            formatted_tool_call = f'{formatted_tool_args}{text_content}'
 
             tool_texts.append(formatted_tool_call)
 

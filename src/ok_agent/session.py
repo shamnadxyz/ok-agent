@@ -54,8 +54,8 @@ def _save_session(session: Session) -> None:
                 ),
             )
     except sqlite3.Error as e:
-        logger.exception("Error while saving session")
-        display_text(str(e), style="ERROR")
+        logger.exception('Error while saving session')
+        display_text(str(e), style='ERROR')
 
 
 def save_history(session: Session) -> None:
@@ -66,34 +66,32 @@ def save_history(session: Session) -> None:
         path: Path for the history file.
     """
     if len(session.messages) <= 1:
-        logger.info(
-            "Skipping save history: history empty or system prompt only"
-        )
+        logger.info('Skipping save history: history empty or system prompt only')
         return
     if session.initial_query is None:
-        logger.info("Skipping save history: missing initial query")
+        logger.info('Skipping save history: missing initial query')
         return
 
     messages_jsonl = [json.dumps(message) for message in session.messages]
-    session.history_path.write_text("\n".join(messages_jsonl), encoding="utf-8")
+    session.history_path.write_text('\n'.join(messages_jsonl), encoding='utf-8')
 
     if not session.is_resume:
         _save_session(session)
 
 
 def find_sessions(
-    find_in: Literal["all", "cwd"] = "cwd",
+    find_in: Literal['all', 'cwd'] = 'cwd',
 ) -> list[SessionMetadata]:
     connection = get_db_connection()
 
     with closing(connection) as con, con:
-        if find_in == "all":
+        if find_in == 'all':
             cursor = con.execute("""
                 SELECT *
                 FROM session_metadata;
                 """)
             sessions = cursor.fetchall()
-        elif find_in == "cwd":
+        elif find_in == 'cwd':
             cwd = str(Path.cwd())
             cursor = con.execute(
                 """

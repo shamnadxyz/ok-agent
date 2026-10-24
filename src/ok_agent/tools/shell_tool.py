@@ -10,17 +10,17 @@ from ok_agent.validator import JSONSchema
 logger = getLogger(__name__)
 
 parameter_schema: JSONSchema = {
-    "type": "object",
-    "properties": {
-        "command": {
-            "type": "string",
+    'type': 'object',
+    'properties': {
+        'command': {
+            'type': 'string',
         },
-        "timeout": {
-            "type": "number",
-            "description": "command timeout in seconds (default: 10)",
+        'timeout': {
+            'type': 'number',
+            'description': 'command timeout in seconds (default: 10)',
         },
     },
-    "required": ["command"],
+    'required': ['command'],
 }
 
 
@@ -47,58 +47,58 @@ def handle_output(
 
     if stdout:
         if isinstance(stdout, bytes):
-            stdout = stdout.decode("utf-8", errors="ignore")
+            stdout = stdout.decode('utf-8', errors='ignore')
 
         lines.append(stdout)
 
     if stderr:
         if isinstance(stderr, bytes):
-            stderr = stderr.decode("utf-8", errors="ignore")
+            stderr = stderr.decode('utf-8', errors='ignore')
 
         lines.extend(
             [
-                "<stderr>",
+                '<stderr>',
                 stderr,
-                "</stderr>",
+                '</stderr>',
             ]
         )
 
-    message = "\n".join(lines)
+    message = '\n'.join(lines)
 
     if len(message) < MAX_OUTPUT_CHARACTERS:
         return message
 
     try:
         temp_file = temporary.create_temp_file()
-        temp_file.write_text(message, encoding="utf-8")
+        temp_file.write_text(message, encoding='utf-8')
 
         with open(temp_file) as f:
             formatted_text = f.read(MAX_OUTPUT_CHARACTERS)
 
             return (
-                f"{formatted_text}\n[Output truncated."
+                f'{formatted_text}\n[Output truncated.'
                 f" Full output saved to '{temp_file}'."
-                f" Read with offset {f.tell()} to continue.]"
+                f' Read with offset {f.tell()} to continue.]'
             )
 
     except OSError:
-        logger.exception("Failed to create tempfile")
+        logger.exception('Failed to create tempfile')
 
-        return f"{message[:MAX_OUTPUT_CHARACTERS]}\n[Output got truncated]"
+        return f'{message[:MAX_OUTPUT_CHARACTERS]}\n[Output got truncated]'
 
 
 guardrails = [
     (
-        r".* /( .*|$|;.*|&&.*|/+)",
+        r'.* /( .*|$|;.*|&&.*|/+)',
         "Commands with root '/' as argument is not allowed. It is very DANGEROUS.",
     ),
     (
-        r"(^| +|;)rm ",
-        "rm command is forbidden. It is very DANGEROUS. Please request the user to remove the particular item.",
+        r'(^| +|;)rm ',
+        'rm command is forbidden. It is very DANGEROUS. Please request the user to remove the particular item.',
     ),
     (
-        r"(^| +|;)ls +.*-[a-zA-Z]*R.*",
-        "ls with option -R is prohibited. Please use `ls -a` to list the current directory and go from there.",
+        r'(^| +|;)ls +.*-[a-zA-Z]*R.*',
+        'ls with option -R is prohibited. Please use `ls -a` to list the current directory and go from there.',
     ),
 ]
 
@@ -117,7 +117,7 @@ def execute_shell_command(command: str, timeout: int = 10) -> str:
 
     try:
         result = subprocess.run(
-            ["sh", "-c", command],
+            ['sh', '-c', command],
             text=True,
             capture_output=True,
             timeout=timeout,
@@ -127,35 +127,35 @@ def execute_shell_command(command: str, timeout: int = 10) -> str:
         return handle_output(
             stdout=result.stdout,
             stderr=result.stderr,
-            prefix=f"Exit code: {result.returncode}",
+            prefix=f'Exit code: {result.returncode}',
         )
 
     except subprocess.TimeoutExpired as e:
         return handle_output(
             stdout=e.stdout,
             stderr=e.stderr,
-            prefix=f"Timeout expired: {timeout}",
+            prefix=f'Timeout expired: {timeout}',
         )
 
     except FileNotFoundError:
-        return f"{command}: command not found"
+        return f'{command}: command not found'
     except OSError as e:
-        return f"Failed to execute command {command}: {type(e).__name__} {e}"
+        return f'Failed to execute command {command}: {type(e).__name__} {e}'
     except ValueError as e:
-        return f"Value Error {command}: {type(e).__name__} {e}"
+        return f'Value Error {command}: {type(e).__name__} {e}'
 
 
 format_spec: FormatSpec = {
-    "prefix": "$ ",
-    "arguments": [
-        {"name": "command"},
+    'prefix': '$ ',
+    'arguments': [
+        {'name': 'command'},
     ],
 }
 
 shell_tool: Tool = {
-    "name": "shell",
-    "description": "Execute shell command.",
-    "parameters": parameter_schema,
-    "function": execute_shell_command,
-    "format_spec": format_spec,
+    'name': 'shell',
+    'description': 'Execute shell command.',
+    'parameters': parameter_schema,
+    'function': execute_shell_command,
+    'format_spec': format_spec,
 }

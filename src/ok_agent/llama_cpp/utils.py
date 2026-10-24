@@ -10,21 +10,21 @@ from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
 
-type Endpoint = Literal["/models", "/chat/completions"]
-type Method = Literal["GET", "POST"]
+type Endpoint = Literal['/models', '/chat/completions']
+type Method = Literal['GET', 'POST']
 
 
 def get_response_error_message(response: urllib.error.HTTPError) -> str:
     try:
-        json_data = response.read().decode("utf-8")
+        json_data = response.read().decode('utf-8')
         data = json.loads(json_data)
 
-        return data.get("error", {}).get("message") or response.reason
+        return data.get('error', {}).get('message') or response.reason
 
     except UnicodeDecodeError as e:
         logger.exception(e.reason)
     except json.JSONDecodeError:
-        logger.exception("JSON decode error")
+        logger.exception('JSON decode error')
 
     return response.reason
 
@@ -32,34 +32,32 @@ def get_response_error_message(response: urllib.error.HTTPError) -> str:
 def build_request(
     endpoint: Endpoint,
     data: bytes | None = None,
-    method: Method = "GET",
+    method: Method = 'GET',
 ) -> urllib.request.Request:
     config = get_config()
     api_base_url = config.api_base_url
-    completions_endpoint = f"{api_base_url}{endpoint}"
+    completions_endpoint = f'{api_base_url}{endpoint}'
 
-    request = urllib.request.Request(
-        completions_endpoint, data=data, method=method
-    )
+    request = urllib.request.Request(completions_endpoint, data=data, method=method)
 
     if config.api_key:
-        request.add_header("Authorization", f"Bearer {config.api_key}")
+        request.add_header('Authorization', f'Bearer {config.api_key}')
 
     return request
 
 
 @lru_cache(maxsize=1)
 def _fetch_models() -> list[str]:
-    request = build_request(endpoint="/models")
+    request = build_request(endpoint='/models')
     with urllib.request.urlopen(request, timeout=5) as response:
-        data = json.loads(response.read().decode("utf-8"))
+        data = json.loads(response.read().decode('utf-8'))
 
-        logger.debug(f"models: {data}")
+        logger.debug(f'models: {data}')
 
-        if "data" not in data:
-            raise KeyError("data not found")
+        if 'data' not in data:
+            raise KeyError('data not found')
 
-        return [entry["id"] for entry in data["data"] if "id" in entry]
+        return [entry['id'] for entry in data['data'] if 'id' in entry]
 
 
 def get_models() -> list[str]:
@@ -76,14 +74,14 @@ def get_models() -> list[str]:
             message = error_message
 
         logger.exception(message)
-        display_text(f"\n{message}", "ERROR")
+        display_text(f'\n{message}', 'ERROR')
 
     except urllib.error.URLError as e:
-        logger.exception(f"{e.reason}")
+        logger.exception(f'{e.reason}')
     except json.JSONDecodeError:
-        logger.exception("JSON decode error")
+        logger.exception('JSON decode error')
     except UnicodeDecodeError:
-        logger.exception("Unicode decode error")
+        logger.exception('Unicode decode error')
     except TimeoutError:
         pass
 

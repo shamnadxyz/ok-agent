@@ -18,9 +18,9 @@ def is_complete(name: str, state: ToolDisplayState) -> bool:
         name: Name of the argument field.
         state: Dictionary used to track the state of streaming.
     """
-    argument_states = state.get("argument_states")
+    argument_states = state.get('argument_states')
     argument_state = argument_states.get(name) or {}
-    return argument_state.get("is_complete") or False
+    return argument_state.get('is_complete') or False
 
 
 def format_tool_call(
@@ -36,9 +36,7 @@ def format_tool_call(
         is_final: If parsing the complete tool_call.
     """
 
-    completed_arguments = rescue_partial_json(
-        tool_call["function"]["arguments"]
-    )
+    completed_arguments = rescue_partial_json(tool_call['function']['arguments'])
 
     if completed_arguments is None:
         return
@@ -49,34 +47,32 @@ def format_tool_call(
         return
 
     try:
-        tools = TOOL_REGISTRY.get_tools([tool_call["function"]["name"]])
+        tools = TOOL_REGISTRY.get_tools([tool_call['function']['name']])
     except ToolNotFoundError as e:
-        display_text(str(e), "ERROR")
+        display_text(str(e), 'ERROR')
         return
 
     tool = tools[0]
 
-    format_spec: FormatSpec | None = tool.get("format_spec")
+    format_spec: FormatSpec | None = tool.get('format_spec')
 
     if not format_spec:
         return None
 
-    prefix = format_spec["prefix"]
-    argument_formats = format_spec.get("arguments")
+    prefix = format_spec['prefix']
+    argument_formats = format_spec.get('arguments')
 
     if not argument_formats:
         return None
 
-    if all(
-        is_complete(argument["name"], state) for argument in argument_formats
-    ):
+    if all(is_complete(argument['name'], state) for argument in argument_formats):
         return None
 
     formatted_texts = []
 
-    if not state.get("initialized"):
-        state["initialized"] = True
-        formatted_texts.append(format_text(prefix, "SPECIAL"))
+    if not state.get('initialized'):
+        state['initialized'] = True
+        formatted_texts.append(format_text(prefix, 'SPECIAL'))
 
     formatted_texts.extend(
         argument_text
@@ -95,7 +91,7 @@ def format_tool_call(
     if not formatted_texts:
         return None
 
-    return "".join(formatted_texts)
+    return ''.join(formatted_texts)
 
 
 def handle_argument_display(
@@ -113,24 +109,24 @@ def handle_argument_display(
         is_final: If parsing the final complete arguments dictionary.
     """
 
-    name = argument_format["name"]
-    style = argument_format.get("style")
-    ensure_newline = argument_format.get("ensure_newline", True)
+    name = argument_format['name']
+    style = argument_format.get('style')
+    ensure_newline = argument_format.get('ensure_newline', True)
 
     if name not in arguments:
         return None
 
-    argument_states = state["argument_states"]
+    argument_states = state['argument_states']
     argument_state = argument_states.get(name)
 
     if not argument_state:
-        argument_state: ArgumentState = {"is_complete": False, "offset": 0}
+        argument_state: ArgumentState = {'is_complete': False, 'offset': 0}
         argument_states[name] = argument_state
 
-    if argument_state["is_complete"]:
+    if argument_state['is_complete']:
         return None
 
-    offset = argument_state["offset"]
+    offset = argument_state['offset']
 
     argument: str = arguments[name]
     argument_length = len(argument)
@@ -139,21 +135,17 @@ def handle_argument_display(
         return None
 
     if offset != 0 and offset == argument_length or is_final:
-        argument_state["is_complete"] = True
+        argument_state['is_complete'] = True
 
     slice = argument[offset:]
 
-    if (
-        argument_state["is_complete"]
-        and ensure_newline
-        and not argument.endswith("\n")
-    ):
+    if argument_state['is_complete'] and ensure_newline and not argument.endswith('\n'):
         if is_final:
-            return format_text(f"{slice}\n", style)
+            return format_text(f'{slice}\n', style)
         else:
-            return "\n"
+            return '\n'
 
-    argument_state["offset"] = argument_length
+    argument_state['offset'] = argument_length
 
     return format_text(slice, style)
 
@@ -168,12 +160,12 @@ def rescue_partial_json(string: str) -> str | None:
         Completed JSON string or None if a closing delimiter is encountered
         without a matching opening delimiter.
     """
-    BRACES_OPEN = "{"
-    BRACES_CLOSE = "}"
-    BRACKET_OPEN = "["
-    BRACKET_CLOSE = "]"
+    BRACES_OPEN = '{'
+    BRACES_CLOSE = '}'
+    BRACKET_OPEN = '['
+    BRACKET_CLOSE = ']'
     QUOTE = '"'
-    BACKSLASH = "\\"
+    BACKSLASH = '\\'
 
     open_delimiters: list[str] = []
     escape_next = False

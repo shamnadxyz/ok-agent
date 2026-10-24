@@ -13,41 +13,41 @@ from ok_agent.validator.validator import ValidationError
 logger = getLogger(__name__)
 
 CONFIG_SCHEMA: ObjectSchema = {
-    "type": "object",
-    "properties": {
-        "api_base_url": {"type": "string"},
-        "api_key": {"type": "string"},
-        "history_length": {"type": "integer"},
-        "preserve_reasoning": {"type": "boolean"},
-        "model": {"type": "string"},
-        "prompt_text": {"type": "string"},
-        "max_turns": {"type": "integer"},
-        "show_tool_result": {"type": "boolean"},
+    'type': 'object',
+    'properties': {
+        'api_base_url': {'type': 'string'},
+        'api_key': {'type': 'string'},
+        'history_length': {'type': 'integer'},
+        'preserve_reasoning': {'type': 'boolean'},
+        'model': {'type': 'string'},
+        'prompt_text': {'type': 'string'},
+        'max_turns': {'type': 'integer'},
+        'show_tool_result': {'type': 'boolean'},
     },
-    "required": ["api_base_url"],
-    "additionalProperties": False,
+    'required': ['api_base_url'],
+    'additionalProperties': False,
 }
 
 
 @dataclass
 class Config:
     api_base_url: str
-    api_key: str = ""
+    api_key: str = ''
     preserve_reasoning: bool = False
     history_length: int = 1000
     model: str | None = None
-    prompt_text: str = "> "
+    prompt_text: str = '> '
     max_turns: int = 15
     show_tool_result: bool = True
 
 
 def get_config_dir() -> Path:
-    xdg_config_path = os.getenv("XDG_CONFIG_HOME")
+    xdg_config_path = os.getenv('XDG_CONFIG_HOME')
 
     if xdg_config_path:
         return Path(xdg_config_path) / PROGRAM_NAME
     else:
-        return Path.home() / ".config" / PROGRAM_NAME
+        return Path.home() / '.config' / PROGRAM_NAME
 
 
 class ConfigError(ValidationError):
@@ -66,10 +66,10 @@ def load_config() -> dict:
         ConfigError: if schema validation fails
     """
     config_dir = get_config_dir()
-    config_file = config_dir / "config.json"
+    config_file = config_dir / 'config.json'
 
     try:
-        with open(config_file, "rb") as f:
+        with open(config_file, 'rb') as f:
             config = json.load(f)
             validate_config(config, CONFIG_SCHEMA)
             return config
@@ -82,27 +82,25 @@ def load_config() -> dict:
         )
     except FileNotFoundError:
         config_dir.mkdir(exist_ok=True)
-        display_text("Press enter for accepting the default")
+        display_text('Press enter for accepting the default')
 
-        default_base_url = "http://localhost:8080/v1"
-        api_base_url = input(
-            f"llama.cpp base url (default: '{default_base_url}'): "
-        )
+        default_base_url = 'http://localhost:8080/v1'
+        api_base_url = input(f"llama.cpp base url (default: '{default_base_url}'): ")
 
         api_key = input("llama.cpp API key (default: ''): ")
 
-        default_model = "llama"
+        default_model = 'llama'
         model_id = input(f"model id: (default: '{default_model}'): ")
 
         default_config = Config(
             api_base_url=api_base_url or default_base_url,
             api_key=api_key,
             model=model_id,
-            prompt_text="❯ ",
+            prompt_text='❯ ',
         )
 
         config_json = json.dumps(vars(default_config), indent=2)
-        config_file.write_text(config_json, encoding="utf-8")
+        config_file.write_text(config_json, encoding='utf-8')
 
         return load_config()
 

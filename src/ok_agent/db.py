@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS session_metadata(
 
 def get_db_path() -> Path:
     state_dir = get_state_dir()
-    return state_dir / "session.db"
+    return state_dir / 'session.db'
 
 
 def dict_factory(cursor, row):

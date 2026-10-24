@@ -14,7 +14,7 @@ def _create_rotating_logger(
     level: int = logging.DEBUG,
     propagate: bool = True,
 ) -> Logger:
-    logs_dir = Path(f"{STATE_DIR}/logs").expanduser()
+    logs_dir = Path(f'{STATE_DIR}/logs').expanduser()
 
     logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -25,7 +25,7 @@ def _create_rotating_logger(
             logs_dir / filename,
             maxBytes=max_bytes,
             backupCount=backup_count,
-            encoding="utf-8",
+            encoding='utf-8',
         )
 
         logger.addHandler(handler)
@@ -37,7 +37,5 @@ def _create_rotating_logger(
 
 
 def setup_logging():
-    _create_rotating_logger(filename="app.log")
-    _create_rotating_logger(
-        filename="trace.jsonl", name="llm.traces", propagate=False
-    )
+    _create_rotating_logger(filename='app.log')
+    _create_rotating_logger(filename='trace.jsonl', name='llm.traces', propagate=False)

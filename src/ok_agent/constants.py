@@ -1,3 +1,3 @@
-PROGRAM_NAME = "ok"
-STATE_DIR = f"~/.local/state/{PROGRAM_NAME}"
+PROGRAM_NAME = 'ok'
+STATE_DIR = f'~/.local/state/{PROGRAM_NAME}'
 MAX_OUTPUT_CHARACTERS = 20000

@@ -10,21 +10,21 @@ from ok_agent.validator import JSONSchema
 logger = getLogger(__name__)
 
 parameter_schema: JSONSchema = {
-    "type": "object",
-    "properties": {
-        "path": {
-            "type": "string",
+    'type': 'object',
+    'properties': {
+        'path': {
+            'type': 'string',
         },
-        "offset": {
-            "type": "integer",
-            "description": "Content position start.",
+        'offset': {
+            'type': 'integer',
+            'description': 'Content position start.',
         },
-        "max_chars": {
-            "type": "integer",
-            "description": "Maximum character limit.",
+        'max_chars': {
+            'type': 'integer',
+            'description': 'Maximum character limit.',
         },
     },
-    "required": ["path"],
+    'required': ['path'],
 }
 
 
@@ -34,12 +34,12 @@ def _is_supported_image(file: Path) -> str | None:
         return None
 
     IMAGE_SIGNATURES = {
-        "image/png": b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a",
-        "image/jpeg": b"\xff\xd8\xff",
-        "image/webp": b"RIFF",
+        'image/png': b'\x89\x50\x4e\x47\x0d\x0a\x1a\x0a',
+        'image/jpeg': b'\xff\xd8\xff',
+        'image/webp': b'RIFF',
     }
 
-    with open(file, "br") as f:
+    with open(file, 'br') as f:
         header = f.read(16)
         for mime, signature in IMAGE_SIGNATURES.items():
             if header.startswith(signature):
@@ -80,8 +80,8 @@ def read_file(
             if next_content:
                 end = f.tell() - 1
                 return (
-                    f"{content}\n[Showing {offset}-{end}."
-                    f" Read with offset {f.tell()} to continue.]"
+                    f'{content}\n[Showing {offset}-{end}.'
+                    f' Read with offset {f.tell()} to continue.]'
                 )
 
             return content
@@ -89,11 +89,11 @@ def read_file(
     except UnicodeDecodeError as e:
         if mime_type := _is_supported_image(file):
             image_bytes = file.read_bytes()
-            data = base64.b64encode(image_bytes).decode("ascii")
+            data = base64.b64encode(image_bytes).decode('ascii')
             return [
                 {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{mime_type};base64,{data}"},
+                    'type': 'image_url',
+                    'image_url': {'url': f'data:{mime_type};base64,{data}'},
                 }
             ]
 
@@ -106,16 +106,16 @@ def read_file(
 
 
 format_spec: FormatSpec = {
-    "prefix": "Read ",
-    "arguments": [
-        {"name": "path"},
+    'prefix': 'Read ',
+    'arguments': [
+        {'name': 'path'},
     ],
 }
 
 read_tool: Tool = {
-    "name": "read",
-    "description": f"Read files. Truncates file content greater than {MAX_OUTPUT_CHARACTERS}. Supported images: png, jpeg, webp.",
-    "parameters": parameter_schema,
-    "function": read_file,
-    "format_spec": format_spec,
+    'name': 'read',
+    'description': f'Read files. Truncates file content greater than {MAX_OUTPUT_CHARACTERS}. Supported images: png, jpeg, webp.',
+    'parameters': parameter_schema,
+    'function': read_file,
+    'format_spec': format_spec,
 }
