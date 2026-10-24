@@ -64,15 +64,27 @@ def handle_tool_calls(
             {**tool_message, "name": name, "arguments": arguments_json}
         )
 
-        formatted_text = format_tool_call(
+        formatted_tool_args = format_tool_call(
             tool_call=tool_call,
             state={"initialized": False, "argument_states": {}},
             is_final=True,
         )
 
-        if formatted_text is not None:
-            newlines += len(formatted_text.splitlines())
-            tool_texts.append(f"{formatted_text}{tool_content}")
+        if formatted_tool_args is not None:
+            newlines += len(formatted_tool_args.splitlines())
+
+            if isinstance(tool_content, str):
+                text_content = tool_content
+            else:
+                text_content = "".join(
+                    content["text"]
+                    for content in tool_content
+                    if content["type"] == "text"
+                )
+
+            formatted_tool_call = f"{formatted_tool_args}{text_content}"
+
+            tool_texts.append(formatted_tool_call)
 
     if config.show_tool_result:
         clear_lines_above(count=newlines)

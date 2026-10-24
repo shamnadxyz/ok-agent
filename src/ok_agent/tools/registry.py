@@ -1,6 +1,7 @@
 import json
 from logging import getLogger
 
+from ok_agent.llama_cpp.types import Content
 from ok_agent.tools.edit_tool import edit_tool
 from ok_agent.tools.read_tool import read_tool
 from ok_agent.tools.shell_tool import shell_tool
@@ -24,7 +25,7 @@ class ToolRegistry:
     def __init__(self, tools: list[Tool]):
         self._tools = {tool["name"]: tool for tool in tools}
 
-    def execute_tool(self, name: str, arguments: str) -> str:
+    def execute_tool(self, name: str, arguments: str) -> Content:
         tool = self._tools.get(name)
 
         if tool is None:

@@ -1,7 +1,9 @@
+import base64
 from logging import getLogger
 from pathlib import Path
 
 from ok_agent.constants import MAX_OUTPUT_CHARACTERS
+from ok_agent.llama_cpp.types import Content
 from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
@@ -26,11 +28,29 @@ parameter_schema: JSONSchema = {
 }
 
 
+def _is_supported_image(file: Path) -> str | None:
+    """Returns the mime type if file is supported image."""
+    if not file.is_file() or not file.exists():
+        return None
+
+    IMAGE_SIGNATURES = {
+        "image/png": b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a",
+        "image/jpeg": b"\xff\xd8\xff",
+        "image/webp": b"RIFF",
+    }
+
+    with open(file, "br") as f:
+        header = f.read(16)
+        for mime, signature in IMAGE_SIGNATURES.items():
+            if header.startswith(signature):
+                return mime
+
+
 def read_file(
     path: str,
     offset: int = 0,
     max_chars: int = MAX_OUTPUT_CHARACTERS,
-) -> str:
+) -> Content:
     """Read file content.
 
     Truncates file content greater than MAX_OUTPUT_CHARACTERS.
@@ -66,6 +86,19 @@ def read_file(
 
             return content
 
+    except UnicodeDecodeError as e:
+        if mime_type := _is_supported_image(file):
+            image_bytes = file.read_bytes()
+            data = base64.b64encode(image_bytes).decode("ascii")
+            return [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{data}"},
+                }
+            ]
+
+        return f"Failed to read '{file.name}' {type(e).__name__} {e}"
+
     except OSError as e:
         return f"Failed to read '{file.name}' {type(e).__name__} {e}"
     except TypeError as e:
@@ -81,6 +114,7 @@ format_spec: FormatSpec = {
 
 read_tool: Tool = {
     "name": "read",
+    "description": f"Read files. Truncates file content greater than {MAX_OUTPUT_CHARACTERS}. Supported images: png, jpeg, webp.",
     "parameters": parameter_schema,
     "function": read_file,
     "format_spec": format_spec,

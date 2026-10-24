@@ -14,7 +14,7 @@ from ok_agent.ansi_sequences import (
     BRIGHT_YELLOW,
     RESET,
 )
-from ok_agent.llama_cpp.types import ContentPartText, SystemMessage
+from ok_agent.llama_cpp.types import Content, SystemMessage
 
 logger = getLogger(__name__)
 
@@ -22,7 +22,7 @@ logger = getLogger(__name__)
 def get_system_prompt() -> SystemMessage:
     agents = Path("AGENTS.md")
 
-    system_message: list[ContentPartText] = [
+    system_message: Content = [
         {
             "type": "text",
             "text": textwrap.dedent(f"""\
@@ -105,6 +105,7 @@ def clear_lines_above(count: int) -> None:
     Args:
         count: number of lines to clear above the cursor.
     """
-    sys.stdout.write(f"\033[{count}A")
-    sys.stdout.write(f"\033[{count}M")
+    for _ in range(count):
+        sys.stdout.write("\033[1A")
+        sys.stdout.write("\033[2K")
     sys.stdout.flush()

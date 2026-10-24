@@ -38,7 +38,16 @@ class ContentPartText(TypedDict):
     text: str
 
 
-type Content = str | list[ContentPartText]
+class ImageUrl(TypedDict):
+    url: str
+
+
+class ContentPartImage(TypedDict):
+    type: Literal["image_url"]
+    image_url: ImageUrl
+
+
+type Content = str | list[ContentPartText | ContentPartImage]
 
 
 class SystemMessage(TypedDict):
