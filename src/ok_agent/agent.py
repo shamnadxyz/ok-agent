@@ -69,47 +69,45 @@ class TurnLimitError(LimitError):
         self.turn_limit = turn_limit
 
         super().__init__(
-            f"Turn limit reached: {self.turn}/{self.turn_limit}",
+            f'Turn limit reached: {self.turn}/{self.turn_limit}',
         )
 
 
 def init_completions():
-    commands = ["/model"]
+    commands = ['/model']
     model_completions = []
 
     def complete(text: str, state: int) -> str | None:
         completions = commands
-        if text == "":
+        if text == '':
             return None
 
-        if text.startswith("/model"):
+        if text.startswith('/model'):
             if not model_completions:
                 model_completions.extend(get_model_completions())
 
             completions = model_completions
 
-        candidates = [
-            command for command in completions if command.startswith(text)
-        ]
+        candidates = [command for command in completions if command.startswith(text)]
 
         if state < len(candidates):
             return candidates[state]
         else:
             return None
 
-    readline.parse_and_bind("tab: complete")
+    readline.parse_and_bind('tab: complete')
     readline.set_completer(complete)
-    readline.set_completer_delims("")
+    readline.set_completer_delims('')
 
 
 def init_readline():
     home = Path.home()
-    histfile = home / ".ok_history"
+    histfile = home / '.ok_history'
     config = get_config()
     history_length = config.history_length
 
-    readline.parse_and_bind(r"set completion-ignore-case on")
-    readline.parse_and_bind(r"set enable-bracketed-paste on")
+    readline.parse_and_bind(r'set completion-ignore-case on')
+    readline.parse_and_bind(r'set enable-bracketed-paste on')
 
     readline.parse_and_bind(r"'\e[A': history-search-backward")
     readline.parse_and_bind(r"'\e[B': history-search-forward")
@@ -133,27 +131,27 @@ def init_readline():
 
 
 def get_model_completions() -> list[str]:
-    return [f"/model {model}" for model in get_models()]
+    return [f'/model {model}' for model in get_models()]
 
 
 def handle_model_command(session: Session, query: str):
     models = get_models()
 
-    selected_model = query.removeprefix("/model").strip()
+    selected_model = query.removeprefix('/model').strip()
 
-    if selected_model == "":
-        display_text("Please pass the model id")
+    if selected_model == '':
+        display_text('Please pass the model id')
         return
 
     if session.model == selected_model:
         return
 
     if selected_model not in models:
-        display_text(f"model '{selected_model}' not found", "ERROR")
+        display_text(f"model '{selected_model}' not found", 'ERROR')
         return
 
     session.model = selected_model
-    display_text(f"Selected model: {selected_model}")
+    display_text(f'Selected model: {selected_model}')
 
 
 def agent(
@@ -189,11 +187,11 @@ def agent(
 
     message = None
 
-    user_message: Message = {"role": "user", "content": query}
+    user_message: Message = {'role': 'user', 'content': query}
     messages.append(user_message)
 
     kwargs = {
-        "preserve_thinking": preserve_reasoning,
+        'preserve_thinking': preserve_reasoning,
     }
 
     while turn < max_turns:
@@ -204,37 +202,37 @@ def agent(
                 tools=function_tools,
                 chat_template_kwargs=kwargs,
             )
-            finish_reason = response["finish_reason"]
+            finish_reason = response['finish_reason']
         except NoFinishReasonError as e:
-            raise CompletionError("finish_reason missing") from e
+            raise CompletionError('finish_reason missing') from e
 
-        assistant_response = response["message"]
+        assistant_response = response['message']
 
         # Store content response for returning as the final response
-        if "content" in assistant_response:
-            message = assistant_response["content"]
+        if 'content' in assistant_response:
+            message = assistant_response['content']
 
-        if finish_reason == "stop":
-            if "content" not in assistant_response:
-                raise CompletionError("missing content")
+        if finish_reason == 'stop':
+            if 'content' not in assistant_response:
+                raise CompletionError('missing content')
 
             messages.append(assistant_response)
             break
 
-        elif finish_reason == "tool_calls":
-            if "tool_calls" not in assistant_response:
-                raise CompletionError("missing tool_calls")
+        elif finish_reason == 'tool_calls':
+            if 'tool_calls' not in assistant_response:
+                raise CompletionError('missing tool_calls')
 
             messages.append(assistant_response)
             messages.extend(
                 handle_tool_calls(
                     tool_registry=tool_registry,
-                    tool_calls=assistant_response["tool_calls"],
+                    tool_calls=assistant_response['tool_calls'],
                 )
             )
-        elif finish_reason == "length":
+        elif finish_reason == 'length':
             raise TokenLimitError(
-                "Maximum token limit reached",
+                'Maximum token limit reached',
             )
 
         turn += 1
@@ -246,7 +244,7 @@ def agent(
         )
 
     if message is None:
-        raise NoResponseError("Model failed to produce a response")
+        raise NoResponseError('Model failed to produce a response')
 
     return message
 
@@ -274,20 +272,18 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
 
         query = input(config.prompt_text).strip()
 
-        if query.lower() == "exit":
+        if query.lower() == 'exit':
             raise SystemExit()
 
-        if query == "":
+        if query == '':
             continue
 
-        if query.startswith("/model"):
+        if query.startswith('/model'):
             handle_model_command(session, query)
             continue
 
         if session.model is None:
-            display_text(
-                "Please select a model with /model command", "WARNING"
-            )
+            display_text('Please select a model with /model command', 'WARNING')
             continue
 
         if session.initial_query is None:
@@ -308,18 +304,18 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
 
         except LimitError as e:
             logger.error(e)
-            display_text(str(e), "ERROR")
+            display_text(str(e), 'ERROR')
         except NoResponseError as e:
             logger.error(e)
-            display_text(str(e), "ERROR")
+            display_text(str(e), 'ERROR')
         except CompletionError as e:
             logger.error(e)
-            display_text(str(e), "ERROR")
+            display_text(str(e), 'ERROR')
         except URLError as e:
             logger.error(e.reason)
-            display_text(str(e.reason), "ERROR")
+            display_text(str(e.reason), 'ERROR')
         except KeyboardInterrupt:
-            display_text("\nAgent Interrupted")
+            display_text('\nAgent Interrupted')
             continue
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)

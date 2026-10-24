@@ -23,7 +23,7 @@ from ok_agent.tools import (
 from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text
 
-trace = getLogger("llm.traces")
+trace = getLogger('llm.traces')
 logger = getLogger(__name__)
 
 
@@ -47,19 +47,19 @@ def _parse_data(event: str) -> dict | None:
     Returns:
       Object loaded from JSON
     """
-    if not event.startswith("data: "):
+    if not event.startswith('data: '):
         return None
 
-    json_data = event.removeprefix("data: ")
+    json_data = event.removeprefix('data: ')
 
-    if json_data == "[DONE]":
+    if json_data == '[DONE]':
         return None
 
     try:
         return json.loads(json_data)
 
     except json.JSONDecodeError:
-        logger.exception("Invalid JSON")
+        logger.exception('Invalid JSON')
         return None
 
 
@@ -68,53 +68,53 @@ def _parse_tool_stream(
     delta: dict,
     tool_states: ToolDisplayStates,
 ) -> None:
-    for tool_call in delta.get("tool_calls", []):
-        idx = tool_call.get("index")
+    for tool_call in delta.get('tool_calls', []):
+        idx = tool_call.get('index')
         if idx is None:
             continue
 
-        tool_function = tool_call.get("function", {})
-        function_name = tool_function.get("name")
-        argument = tool_function.get("arguments")
+        tool_function = tool_call.get('function', {})
+        function_name = tool_function.get('name')
+        argument = tool_function.get('arguments')
 
-        function_id: str = tool_call.get("id") or tool_calls[idx]["id"]
-        tool_type = tool_call.get("type")
+        function_id: str = tool_call.get('id') or tool_calls[idx]['id']
+        tool_type = tool_call.get('type')
 
-        if tool_type is not None and tool_type != "function":
-            logger.warning(f"Incompatible tool type: {tool_type}")
+        if tool_type is not None and tool_type != 'function':
+            logger.warning(f'Incompatible tool type: {tool_type}')
             display_text(
-                f"Incompatible tool type: {tool_type}",
-                "ERROR",
+                f'Incompatible tool type: {tool_type}',
+                'ERROR',
             )
             continue
 
         if function_name is not None and function_id is not None:
             call: Function = {
-                "name": function_name,
-                "arguments": "",
+                'name': function_name,
+                'arguments': '',
             }
 
             function: MessageToolCall = {
-                "id": function_id,
-                "type": tool_type,
-                "function": call,
+                'id': function_id,
+                'type': tool_type,
+                'function': call,
             }
 
             tool_states[function_id] = {
-                "initialized": False,
-                "argument_states": {},
+                'initialized': False,
+                'argument_states': {},
             }
 
             tool_calls.insert(idx, function)
 
         if argument:
-            tool_calls[idx]["function"]["arguments"] += argument
+            tool_calls[idx]['function']['arguments'] += argument
 
         if formatted_text := format_tool_call(
             tool_call=tool_calls[idx],
             state=tool_states[function_id],
         ):
-            display_text(formatted_text, end="")
+            display_text(formatted_text, end='')
 
 
 def _handle_stream(stream: Iterable[bytes]) -> Response:
@@ -140,81 +140,81 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     previously_content = False
 
     for line in stream:
-        decoded_response = line.decode("utf-8", errors="ignore").strip()
-        if decoded_response == "":
+        decoded_response = line.decode('utf-8', errors='ignore').strip()
+        if decoded_response == '':
             continue
 
         data = _parse_data(decoded_response)
         if data is None:
             continue
 
-        choices = data.get("choices", [])
+        choices = data.get('choices', [])
 
         if not choices:
             continue
 
         choice: dict = choices[0]
 
-        finish_reason = choice.get("finish_reason")
+        finish_reason = choice.get('finish_reason')
 
-        delta = choice.get("delta")
+        delta = choice.get('delta')
 
         if not delta:
             continue
 
-        role = delta.get("role")
+        role = delta.get('role')
 
-        reasoning_content = delta.get("reasoning_content")
-        content = delta.get("content")
+        reasoning_content = delta.get('reasoning_content')
+        content = delta.get('content')
 
         if reasoning_content:
             if not previously_reasoning:
                 previously_reasoning = True
 
-            display_text(reasoning_content, "DIM", end="")
+            display_text(reasoning_content, 'DIM', end='')
             reasoning_contents.append(reasoning_content)
         elif previously_reasoning:
             previously_reasoning = False
-            if not reasoning_contents[-1].endswith("\n"):
+            if not reasoning_contents[-1].endswith('\n'):
                 display_text()
 
         if content:
             if not previously_content:
                 previously_content = True
 
-            display_text(content, end="")
+            display_text(content, end='')
             contents.append(content)
         elif previously_content:
             previously_content = False
-            if not contents[-1].endswith("\n"):
+            if not contents[-1].endswith('\n'):
                 display_text()
 
-        if "tool_calls" in delta:
+        if 'tool_calls' in delta:
             _parse_tool_stream(
                 tool_calls=tool_calls,
                 delta=delta,
                 tool_states=tool_display_states,
             )
 
-    if previously_content and not contents[-1].endswith("\n"):
+    if previously_content and not contents[-1].endswith('\n'):
         display_text()
 
-    response: Response = {"message": {"role": role or "assistant"}}
+    response: Response = {'message': {'role': role or 'assistant'}}
 
     if reasoning_contents and config.preserve_reasoning:
-        response["message"]["reasoning_content"] = "".join(reasoning_contents)
+        response['message']['reasoning_content'] = ''.join(reasoning_contents)
 
     if contents:
-        content = "".join(contents)
-        response["message"]["content"] = content
+        content = ''.join(contents)
+        response['message']['content'] = content
 
     if tool_calls:
-        response["message"]["tool_calls"] = tool_calls
+        response['message']['tool_calls'] = tool_calls
 
     if not finish_reason:
-        raise NoFinishReasonError("No finish reason", response)
+        raise NoFinishReasonError('No finish reason', response)
 
-    response["finish_reason"] = finish_reason
+    response['finish_reason'] = finish_reason
 
     trace.debug(response)
 
@@ -245,31 +245,31 @@ def completion(
         NoFinishReasonError: if no finish_reason was received
         URLError
     """
-    completions_endpoint = "/chat/completions"
+    completions_endpoint = '/chat/completions'
 
     payload = {
-        "model": model,
-        "stream": True,
-        "tools": tools,
-        "messages": messages,
-        "chat_template_kwargs": chat_template_kwargs,
+        'model': model,
+        'stream': True,
+        'tools': tools,
+        'messages': messages,
+        'chat_template_kwargs': chat_template_kwargs,
     }
 
     data = json.dumps(
         payload,
         ensure_ascii=False,
-        separators=(",", ":"),
+        separators=(',', ':'),
         allow_nan=False,
     )
 
-    logger.debug(f"data: {data}")
+    logger.debug(f'data: {data}')
 
     request = build_request(
         completions_endpoint,
-        data.encode("utf-8"),
-        method="POST",
+        data.encode('utf-8'),
+        method='POST',
     )
-    request.add_header("Content-Type", "application/json")
+    request.add_header('Content-Type', 'application/json')
 
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
