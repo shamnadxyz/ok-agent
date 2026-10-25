@@ -278,6 +278,3 @@ def completion(
     except urllib.error.HTTPError as e:
         error_message = get_response_error_message(e)
         raise CompletionError(error_message)
-
-    except urllib.error.URLError:
-        raise
