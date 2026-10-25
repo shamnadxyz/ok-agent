@@ -51,10 +51,15 @@ def validate_array(data: list, schema: JSONSchema) -> None:
     if items is None:
         return
 
+    min_items = schema.get('minItems')
+
+    if min_items and len(data) < min_items:
+        raise ValidationError(f'Array should have atleast "{min_items}" items.')
+
     item_type = items.get('type')
 
     if not all(_is_type(item, item_type) for item in data):
-        raise ValidationError(f"each item in the array should be '{item_type}'")
+        raise ValidationError(f"Each item in the array should be '{item_type}'")
 
 
 def validate_object(data: dict, schema: JSONSchema) -> None:
@@ -79,7 +84,7 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
     if additional_properties == False and (
         extra_properties := [key for key in data if key not in properties]
     ):
-        validation_fails.append(f'extra properties found: {",".join(extra_properties)}')
+        validation_fails.append(f'Extra properties found: {",".join(extra_properties)}')
 
     try:
         _check_arguments(required_arguments, data)
@@ -103,6 +108,30 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
                 validate_array(value, property_schema)
             except ValidationError as e:
                 validation_fails.append(f'{property}: {e.message}')
+
+        if type == 'string':
+            min_length = property_schema.get('minLength')
+            max_length = property_schema.get('maxLength')
+
+            if min_length and len(value) < min_length:
+                validation_fails.append(
+                    f'{property}: length must be at least: {min_length}'
+                )
+
+            if max_length and len(value) > max_length:
+                validation_fails.append(f'{property}: length must not exceed: {max_length}')
+
+        if type in ['number', 'integer']:
+            minimum = property_schema.get('minimum')
+            maximum = property_schema.get('maximum')
+
+            if minimum and value < minimum:
+                validation_fails.append(f'{property}: is lower than minimum: {minimum}')
+
+            if maximum and value > maximum:
+                validation_fails.append(
+                    f'{property}: is greater than maximum: {maximum}'
+                )
 
         elif type == 'object':
             try:

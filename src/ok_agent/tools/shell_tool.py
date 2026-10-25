@@ -2,7 +2,7 @@ import re
 import subprocess
 from logging import getLogger
 
-from ok_agent.constants import MAX_OUTPUT_CHARACTERS
+from ok_agent.constants import MAX_OUTPUT_LINES
 from ok_agent.temporary import temporary
 from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
@@ -36,26 +36,26 @@ def handle_output(
     Adds the exit code to the end of the message.
 
     Args:
-        stdout: content from stdout.
-        stderr: content from stderr.
-        exit_code: exit code of the process.
+        stdout: Content from stdout.
+        stderr: Content from stderr.
+        prefix: Info prepended like exit code or timeout.
     """
-    lines = []
+    message_lines = []
 
     if prefix:
-        lines.append(prefix)
+        message_lines.append(prefix)
 
     if stdout:
         if isinstance(stdout, bytes):
             stdout = stdout.decode('utf-8', errors='ignore')
 
-        lines.append(stdout)
+        message_lines.append(stdout)
 
     if stderr:
         if isinstance(stderr, bytes):
             stderr = stderr.decode('utf-8', errors='ignore')
 
-        lines.extend(
+        message_lines.extend(
             [
                 '<stderr>',
                 stderr,
@@ -63,28 +63,30 @@ def handle_output(
             ]
         )
 
-    message = '\n'.join(lines)
+    message = '\n'.join(message_lines)
 
-    if len(message) < MAX_OUTPUT_CHARACTERS:
+    split_messages = message.splitlines()
+    if len(split_messages) < MAX_OUTPUT_LINES:
         return message
+
+    truncated_output = '\n'.join(split_messages[:MAX_OUTPUT_LINES])
 
     try:
         temp_file = temporary.create_temp_file()
         temp_file.write_text(message, encoding='utf-8')
 
-        with open(temp_file) as f:
-            formatted_text = f.read(MAX_OUTPUT_CHARACTERS)
-
-            return (
-                f'{formatted_text}\n[Output truncated.'
-                f" Full output saved to '{temp_file}'."
-                f' Read with offset {f.tell()} to continue.]'
-            )
+        return (
+            'Output got truncated'
+            f"\n- Full output saved to '{temp_file}'"
+            f'\n- Read with offset {MAX_OUTPUT_LINES + 1} to continue'
+            '\nOutput:'
+            f'\n{truncated_output}'
+        )
 
     except OSError:
         logger.exception('Failed to create tempfile')
 
-        return f'{message[:MAX_OUTPUT_CHARACTERS]}\n[Output got truncated]'
+        return f'Output got truncated\nOutput:\n{truncated_output}'
 
 
 guardrails = [

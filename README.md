@@ -6,7 +6,7 @@ A minimal CLI coding agent with **zero external package dependencies**.
 
 ### Tools
 
-- **Read**: Read file. Large files truncated by a character limit.
+- **Read**: Read file. Supported image formats: jpeg, png, and webp.
 - **Write**: Write and overwrite files.
 - **Edit**: Edit file by exact text replacement.
 - **Shell**: Execute shell commands. Handles large outputs by saving to a temp file and does cleanup at exit.

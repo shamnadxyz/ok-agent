@@ -1,13 +1,10 @@
 import base64
-from logging import getLogger
 from pathlib import Path
 
-from ok_agent.constants import MAX_OUTPUT_CHARACTERS
+from ok_agent.constants import MAX_OUTPUT_LINES
 from ok_agent.llama_cpp.types import Content
 from ok_agent.tools.types import FormatSpec, Tool
 from ok_agent.validator import JSONSchema
-
-logger = getLogger(__name__)
 
 parameter_schema: JSONSchema = {
     'type': 'object',
@@ -17,11 +14,13 @@ parameter_schema: JSONSchema = {
         },
         'offset': {
             'type': 'integer',
-            'description': 'Content position start.',
+            'description': 'Line to start reading.',
+            'minimum': 0,
         },
-        'max_chars': {
+        'lines': {
             'type': 'integer',
-            'description': 'Maximum character limit.',
+            'description': 'Number of lines to read.',
+            'minimum': 1,
         },
     },
     'required': ['path'],
@@ -49,16 +48,16 @@ def _is_supported_image(file: Path) -> str | None:
 def read_file(
     path: str,
     offset: int = 0,
-    max_chars: int = MAX_OUTPUT_CHARACTERS,
+    lines: int = MAX_OUTPUT_LINES,
 ) -> Content:
     """Read file content.
 
-    Truncates file content greater than MAX_OUTPUT_CHARACTERS.
+    Truncates file content greater than MAX_OUTPUT_LINES.
 
     Args:
-        path: path to the file.
-        offset: read position.
-        max_chars: Maximum character limit.
+        path: Path to the file.
+        offset: Line to start reading.
+        lines: Number of lines to read.
     """
     file = Path(path)
 
@@ -70,18 +69,32 @@ def read_file(
 
     try:
         with open(file) as f:
-            if offset:
-                f.seek(offset)
+            contents = []
 
-            content = f.read(max_chars)
+            if offset > 1:
+                for _ in range(offset - 1):
+                    f.readline()
+
+            for count, line in enumerate(f, start=1):
+                contents.append(line)
+                if count == lines:
+                    break
 
             next_content = f.read(1)
 
+            content = ''.join(contents)
+
+            line_count = len(contents)
+
+            start_line = max(1, offset)
+            end_line = line_count + max(0, offset - 1)
+
             if next_content:
-                end = f.tell() - 1
                 return (
-                    f'{content}\n[Showing {offset}-{end}.'
-                    f' Read with offset {f.tell()} to continue.]'
+                    f'Showing lines: {start_line}-{end_line}'
+                    f'\nContinue with offset: {end_line + 1}'
+                    f'\nContent:'
+                    f'\n{content}'
                 )
 
             return content
@@ -114,7 +127,7 @@ format_spec: FormatSpec = {
 
 read_tool: Tool = {
     'name': 'read',
-    'description': f'Read files. Truncates file content greater than {MAX_OUTPUT_CHARACTERS}. Supported images: png, jpeg, webp.',
+    'description': 'Read files. Supported image formats: png, jpeg, and webp.',
     'parameters': parameter_schema,
     'function': read_file,
     'format_spec': format_spec,
