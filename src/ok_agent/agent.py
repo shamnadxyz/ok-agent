@@ -74,7 +74,7 @@ class TurnLimitError(LimitError):
 
 
 def init_completions():
-    commands = ['/model']
+    commands = ['/model', '/continue']
     model_completions = []
 
     def complete(text: str, state: int) -> str | None:
@@ -155,11 +155,11 @@ def handle_model_command(session: Session, query: str):
 
 
 def agent(
-    query: str,
     tool_registry: ToolRegistry,
     model: str,
     messages: list[Message],
     preserve_reasoning: bool,
+    query: str | None = None,
     max_turns: int = 15,
 ) -> str:
     """Send query to the agent.
@@ -187,8 +187,9 @@ def agent(
 
     message = None
 
-    user_message: Message = {'role': 'user', 'content': query}
-    messages.append(user_message)
+    if query:
+        user_message: Message = {'role': 'user', 'content': query}
+        messages.append(user_message)
 
     kwargs = {
         'preserve_thinking': preserve_reasoning,
@@ -286,7 +287,19 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
             display_text('Please select a model with /model command', 'WARNING')
             continue
 
-        if session.initial_query is None:
+        if query.strip() == '/continue':
+            if len(session.messages) == 0:
+                display_text('History empty', style='WARNING')
+                continue
+
+            previous_message = session.messages[0]
+
+            if previous_message['role'] in ['tool', 'user']:
+                query = None
+            else:
+                query = 'continue'
+
+        if session.initial_query is None and query is not None:
             session.initial_query = query
 
         try:
