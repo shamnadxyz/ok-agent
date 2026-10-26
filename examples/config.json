@@ -3,7 +3,9 @@
 	"api_key": "API_KEY",
 	"model": "zai-org/GLM-5.3-Flash",
 	"prompt_history_length": 1000,
-	"preserve_reasoning": false,
+	"preserve_reasoning": true,
 	"prompt": "❯ ",
-	"max_turns": 20
+	"log_level": "ERROR",
+	"log_disable": false,
+	"max_turns": 30
 }

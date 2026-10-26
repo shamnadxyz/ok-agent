@@ -1,16 +1,14 @@
 import json
 import os
 from dataclasses import dataclass
-from logging import getLogger
 from pathlib import Path
+from typing import Literal
 
 from ok_agent.constants import PROGRAM_NAME, STATE_DIR
 from ok_agent.utils import display_text
 from ok_agent.validator import ObjectSchema
 from ok_agent.validator import validate_object as validate_config
 from ok_agent.validator.validator import ValidationError
-
-logger = getLogger(__name__)
 
 CONFIG_SCHEMA: ObjectSchema = {
     'type': 'object',
@@ -23,6 +21,15 @@ CONFIG_SCHEMA: ObjectSchema = {
         'prompt': {'type': 'string'},
         'max_turns': {'type': 'integer'},
         'show_tool_result': {'type': 'boolean'},
+        'log_directory': {'type': 'string'},
+        'log_filename': {'type': 'string'},
+        'log_max_bytes': {'type': 'integer'},
+        'log_backup_count': {'type': 'integer'},
+        'log_level': {
+            'type': 'string',
+            'enum': ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+        },
+        'log_disable': {'type': 'boolean'},
     },
     'required': ['api_base_url'],
     'additionalProperties': False,
@@ -39,6 +46,12 @@ class Config:
     prompt: str = '> '
     max_turns: int = 15
     show_tool_result: bool = True
+    log_directory: str = f'{STATE_DIR}/logs'
+    log_filename: str = 'app.log'
+    log_max_bytes: int = 10 * 1024 * 1024
+    log_backup_count: int = 2
+    log_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = 'ERROR'
+    log_disable: bool = False
 
 
 def get_config_dir() -> Path:

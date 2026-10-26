@@ -23,7 +23,6 @@ from ok_agent.tools import (
 from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text
 
-trace = getLogger('llm.traces')
 logger = getLogger(__name__)
 
 
@@ -216,7 +215,7 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     response['finish_reason'] = finish_reason
 
-    trace.debug(response)
+    logger.debug(response)
 
     return response
 

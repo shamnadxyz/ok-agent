@@ -1,11 +1,11 @@
 import argparse
 import atexit
 import json
+import logging
 import sqlite3
 import textwrap
 import time
 from datetime import UTC, datetime
-from logging import getLogger
 from pathlib import Path
 
 from ok_agent.agent import (
@@ -29,7 +29,7 @@ from ok_agent.tools import (
 from ok_agent.tools.utils import format_tool_call
 from ok_agent.utils import display_text, get_system_prompt
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HistoryReadError(Exception):
@@ -125,11 +125,20 @@ def replay_history(messages: list[Message]):
 
 def app():
     global TOOL_REGISTRY
-    setup_logging()
-
     try:
         config = get_config()
-        logger.debug(f'config: {config}')
+        setup_logging(
+            directory=config.log_directory,
+            filename=config.log_filename,
+            max_bytes=config.log_max_bytes,
+            backup_count=config.log_backup_count,
+            log_level=config.log_level,
+        )
+
+        if config.log_disable:
+            logging.disable(logging.CRITICAL)
+
+        logger.debug(config)
 
     except ConfigError as e:
         display_text(f'{e.path}: {e.message}', 'ERROR')

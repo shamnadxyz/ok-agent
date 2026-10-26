@@ -1,24 +1,28 @@
-import logging
-from logging import Logger, getLogger
+from logging import getLogger
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from ok_agent.constants import STATE_DIR
 
-
-def _create_rotating_logger(
+def setup_logging(
     filename: str,
-    name: str | None = None,
-    max_bytes: int = 10 * 1024 * 1024,
-    backup_count: int = 2,
-    level: int = logging.DEBUG,
-    propagate: bool = True,
-) -> Logger:
-    logs_dir = Path(f'{STATE_DIR}/logs').expanduser()
+    max_bytes: int,
+    backup_count: int,
+    directory: str,
+    log_level: int | str,
+) -> None:
+    """Setup logging.
 
+    Args:
+        filename: Log filename.
+        max_bytes: Max size in bytes for a log file.
+        backup_count: Number of log files to keep.
+        directory: Directory path to store logs.
+        log_level: Log level.
+    """
+    logs_dir = Path(directory).expanduser()
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    logger = getLogger() if name is None else getLogger(name)
+    logger = getLogger()
 
     if not logger.handlers:
         handler = RotatingFileHandler(
@@ -30,12 +34,4 @@ def _create_rotating_logger(
 
         logger.addHandler(handler)
 
-    logger.setLevel(level)
-    logger.propagate = propagate
-
-    return logger
-
-
-def setup_logging():
-    _create_rotating_logger(filename='app.log')
-    _create_rotating_logger(filename='trace.jsonl', name='llm.traces', propagate=False)
+    logger.setLevel(log_level)
