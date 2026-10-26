@@ -89,34 +89,7 @@ def handle_output(
         return f'Output got truncated\nOutput:\n{truncated_output}'
 
 
-guardrails = [
-    (
-        r'.* /( .*|$|;.*|&&.*|/+)',
-        "Commands with root '/' as argument is not allowed. It is very DANGEROUS.",
-    ),
-    (
-        r'(^| +|;)rm ',
-        'rm command is forbidden. It is very DANGEROUS. Please request the user to remove the particular item.',
-    ),
-    (
-        r'(^| +|;)ls +.*-[a-zA-Z]*R.*',
-        'ls with option -R is prohibited. Please use `ls -a` to list the current directory and go from there.',
-    ),
-]
-
-
-def check_guardrails(command: str) -> str | None:
-    for regex, message in guardrails:
-        if re.match(regex, command):
-            return message
-
-
 def execute_shell_command(command: str, timeout: int = 10) -> str:
-    error_message = check_guardrails(command)
-
-    if error_message:
-        return error_message
-
     try:
         result = subprocess.run(
             ['sh', '-c', command],
