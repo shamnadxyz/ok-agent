@@ -292,7 +292,7 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
                 display_text('History empty', style='WARNING')
                 continue
 
-            previous_message = session.messages[0]
+            previous_message = session.messages[-1]
 
             if previous_message['role'] in ['tool', 'user']:
                 query = None
