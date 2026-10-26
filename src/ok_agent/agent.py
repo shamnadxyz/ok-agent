@@ -104,7 +104,7 @@ def init_readline():
     home = Path.home()
     histfile = home / '.ok_history'
     config = get_config()
-    history_length = config.history_length
+    prompt_history_length = config.prompt_history_length
 
     readline.parse_and_bind(r'set completion-ignore-case on')
     readline.parse_and_bind(r'set enable-bracketed-paste on')
@@ -124,7 +124,7 @@ def init_readline():
 
     def save(prev_h_len, histfile):
         new_h_len = readline.get_current_history_length()
-        readline.set_history_length(history_length)
+        readline.set_history_length(prompt_history_length)
         readline.append_history_file(new_h_len - prev_h_len, histfile)
 
     atexit.register(save, h_len, histfile)

@@ -2,7 +2,7 @@
 	"api_base_url": "http://localhost:9931/v1",
 	"api_key": "API_KEY",
 	"model": "zai-org/GLM-5.3-Flash",
-	"history_length": 1000,
+	"prompt_history_length": 1000,
 	"preserve_reasoning": false,
 	"prompt": "❯ ",
 	"max_turns": 20

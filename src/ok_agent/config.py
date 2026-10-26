@@ -17,7 +17,7 @@ CONFIG_SCHEMA: ObjectSchema = {
     'properties': {
         'api_base_url': {'type': 'string'},
         'api_key': {'type': 'string'},
-        'history_length': {'type': 'integer'},
+        'prompt_history_length': {'type': 'integer'},
         'preserve_reasoning': {'type': 'boolean'},
         'model': {'type': 'string'},
         'prompt': {'type': 'string'},
@@ -34,7 +34,7 @@ class Config:
     api_base_url: str
     api_key: str = ''
     preserve_reasoning: bool = False
-    history_length: int = 1000
+    prompt_history_length: int = 1000
     model: str | None = None
     prompt: str = '> '
     max_turns: int = 15
