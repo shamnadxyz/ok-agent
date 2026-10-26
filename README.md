@@ -25,4 +25,5 @@ A minimal CLI coding agent with **zero external package dependencies**.
 
 - No Compaction.
 - No MCP support.
+- No Skills support.
 - Synchronous.
