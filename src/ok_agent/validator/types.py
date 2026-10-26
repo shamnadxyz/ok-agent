@@ -1,47 +1,48 @@
-from typing import Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 type SchemaType = Literal['array', 'boolean', 'integer', 'number', 'object', 'string']
 
 
-class ObjectSchema(TypedDict):
-    type: Literal['object']
+class BaseSchema(TypedDict):
     description: NotRequired[str]
+
+
+class ObjectSchema(BaseSchema):
+    type: Literal['object']
     properties: NotRequired[dict[str, 'JSONSchema']]
     required: NotRequired[list[str]]
     additionalProperties: NotRequired[bool]
 
 
-class ArraySchema(TypedDict):
+class ArraySchema(BaseSchema):
     type: Literal['array']
-    description: NotRequired[str]
     items: NotRequired['JSONSchema']
     minItems: NotRequired[int]
 
 
-class StringSchema(TypedDict):
+class StringSchema(BaseSchema):
     type: Literal['string']
-    description: NotRequired[str]
     minLength: NotRequired[int]
     maxLength: NotRequired[int]
+    enum: NotRequired[list[Any]]
 
 
-class NumberSchema(TypedDict):
+class NumberSchema(BaseSchema):
     type: Literal['number']
-    description: NotRequired[str]
     minimum: NotRequired[int]
     maximum: NotRequired[int]
+    enum: NotRequired[list[Any]]
 
 
-class IntegerSchema(TypedDict):
+class IntegerSchema(BaseSchema):
     type: Literal['integer']
-    description: NotRequired[str]
     minimum: NotRequired[int]
     maximum: NotRequired[int]
+    enum: NotRequired[list[Any]]
 
 
-class BooleanSchema(TypedDict):
+class BooleanSchema(BaseSchema):
     type: Literal['boolean']
-    description: NotRequired[str]
 
 
 type JSONSchema = (

@@ -1,3 +1,5 @@
+from typing import Any
+
 from ok_agent.validator.types import JSONSchema, SchemaType
 
 
@@ -62,6 +64,10 @@ def validate_array(data: list, schema: JSONSchema) -> None:
         raise ValidationError(f"Each item in the array should be '{item_type}'")
 
 
+def _validate_enum(enum: list[Any], value) -> bool:
+    return any(type(entry) == type(value) and entry == value for entry in enum)
+
+
 def validate_object(data: dict, schema: JSONSchema) -> None:
     """Validate object schema.
 
@@ -97,21 +103,26 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
 
         value = data[property]
 
-        type = property_schema.get('type')
+        property_type = property_schema.get('type')
 
-        if not _is_type(value, type):
-            validation_fails.append(f'{property} should be {type}')
+        if not _is_type(value, property_type):
+            validation_fails.append(f'{property} should be {property_type}')
             continue
 
-        if type == 'array':
+        enum = property_schema.get('enum')
+
+        if property_type == 'array':
             try:
                 validate_array(value, property_schema)
             except ValidationError as e:
                 validation_fails.append(f'{property}: {e.message}')
 
-        if type == 'string':
+        if property_type == 'string':
             min_length = property_schema.get('minLength')
             max_length = property_schema.get('maxLength')
+
+            if enum and not _validate_enum(enum, value):
+                validation_fails.append(f'{property}: value must be one of: {enum}')
 
             if min_length and len(value) < min_length:
                 validation_fails.append(
@@ -119,9 +130,11 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
                 )
 
             if max_length and len(value) > max_length:
-                validation_fails.append(f'{property}: length must not exceed: {max_length}')
+                validation_fails.append(
+                    f'{property}: length must not exceed: {max_length}'
+                )
 
-        if type in ['number', 'integer']:
+        if property_type in ['number', 'integer']:
             minimum = property_schema.get('minimum')
             maximum = property_schema.get('maximum')
 
@@ -133,7 +146,10 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
                     f'{property}: is greater than maximum: {maximum}'
                 )
 
-        elif type == 'object':
+            if enum and not _validate_enum(enum, value):
+                validation_fails.append(f'{property}: value must be one of: {enum}')
+
+        elif property_type == 'object':
             try:
                 validate_object(value, property_schema)
             except ValidationError as e:

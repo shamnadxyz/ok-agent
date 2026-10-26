@@ -20,6 +20,9 @@ class ValidatorObjectPropertiesTestCase(unittest.TestCase):
                 'number': {'type': 'number'},
                 'object': {'type': 'object'},
                 'string': {'type': 'string'},
+                'string_enum': {'type': 'string', 'enum': ['one', 'two']},
+                'integer_enum': {'type': 'integer', 'enum': [1, 2]},
+                'number_enum': {'type': 'number', 'enum': [1.2, 2.2, 2]},
             },
         }
 
@@ -82,6 +85,34 @@ class ValidatorObjectPropertiesTestCase(unittest.TestCase):
                     self.schema,
                 )
 
+    def test_string_enum_pass(self):
+        in_enum = [
+            'one',
+            'two',
+        ]
+
+        for value in in_enum:
+            with self.subTest(value=value):
+                self.assertIsNone(validate_object({'string_enum': value}, self.schema))
+
+    def test_string_enum_fail(self):
+        not_in_enum = [
+            '',
+            'One',
+            'Two',
+            'three',
+            'tw',
+        ]
+
+        for value in not_in_enum:
+            with self.subTest(value=value):
+                self.assertRaises(
+                    ValidationError,
+                    validate_object,
+                    {'string_enum': value},
+                    self.schema,
+                )
+
     def test_object_pass(self):
         objects = [
             {'one': 'two'},
@@ -139,6 +170,25 @@ class ValidatorObjectPropertiesTestCase(unittest.TestCase):
                     self.schema,
                 )
 
+    def test_integer_enum_pass(self):
+        in_enum = [1, 2]
+
+        for value in in_enum:
+            with self.subTest(value=value):
+                self.assertIsNone(validate_object({'integer_enum': value}, self.schema))
+
+    def test_integer_enum_fail(self):
+        not_in_enum = [3, 4, 1.0, 2.0, 2.1, 1.1]
+
+        for value in not_in_enum:
+            with self.subTest(value=value):
+                self.assertRaises(
+                    ValidationError,
+                    validate_object,
+                    {'integer_enum': value},
+                    self.schema,
+                )
+
     def test_array_pass(self):
         arrays = [[1], []]
 
@@ -189,6 +239,25 @@ class ValidatorObjectPropertiesTestCase(unittest.TestCase):
                     ValidationError,
                     validate_object,
                     {'number': value},
+                    self.schema,
+                )
+
+    def test_number_enum_pass(self):
+        in_enum = [1.2, 2.2, 2]
+
+        for value in in_enum:
+            with self.subTest(value=value):
+                self.assertIsNone(validate_object({'number_enum': value}, self.schema))
+
+    def test_number_enum_fail(self):
+        not_in_enum = [1, 2.0, 2.3]
+
+        for value in not_in_enum:
+            with self.subTest(value=value):
+                self.assertRaises(
+                    ValidationError,
+                    validate_object,
+                    {'number_enum': value},
                     self.schema,
                 )
 
