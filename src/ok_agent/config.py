@@ -20,7 +20,7 @@ CONFIG_SCHEMA: ObjectSchema = {
         'history_length': {'type': 'integer'},
         'preserve_reasoning': {'type': 'boolean'},
         'model': {'type': 'string'},
-        'prompt_text': {'type': 'string'},
+        'prompt': {'type': 'string'},
         'max_turns': {'type': 'integer'},
         'show_tool_result': {'type': 'boolean'},
     },
@@ -36,7 +36,7 @@ class Config:
     preserve_reasoning: bool = False
     history_length: int = 1000
     model: str | None = None
-    prompt_text: str = '> '
+    prompt: str = '> '
     max_turns: int = 15
     show_tool_result: bool = True
 
@@ -96,7 +96,7 @@ def load_config() -> dict:
             api_base_url=api_base_url or default_base_url,
             api_key=api_key,
             model=model_id,
-            prompt_text='❯ ',
+            prompt='❯ ',
         )
 
         config_json = json.dumps(vars(default_config), indent=2)

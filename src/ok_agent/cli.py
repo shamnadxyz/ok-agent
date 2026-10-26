@@ -76,10 +76,10 @@ def replay_history(messages: list[Message]):
             case 'user':
                 content = message['content']
                 if isinstance(content, str):
-                    display_text(f'{config.prompt_text}', 'SPECIAL', end='')
+                    display_text(f'{config.prompt}', 'SPECIAL', end='')
                     display_text(content)
                 elif isinstance(content, list):
-                    display_text(f'{config.prompt_text}', 'SPECIAL', end='')
+                    display_text(f'{config.prompt}', 'SPECIAL', end='')
                     for part in content:
                         if part['type'] == 'text':
                             display_text(part['text'], end='')

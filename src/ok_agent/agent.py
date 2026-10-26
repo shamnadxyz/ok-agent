@@ -271,7 +271,7 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
         # Discard queued data on STDIN
         termios.tcflush(fd, termios.TCIFLUSH)
 
-        query = input(config.prompt_text).strip()
+        query = input(config.prompt).strip()
 
         if query.lower() == 'exit':
             raise SystemExit()
