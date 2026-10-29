@@ -13,20 +13,20 @@ parameter_schema: JSONSchema = {
             'type': 'string',
             'description': 'Path to the file.',
         },
-        'old_text': {
+        'old_string': {
             'type': 'string',
             'description': 'Unique text to be replaced',
         },
-        'new_text': {
+        'new_string': {
             'type': 'string',
             'description': 'Text to replace with',
         },
     },
-    'required': ['path', 'old_text', 'new_text'],
+    'required': ['path', 'old_string', 'new_string'],
 }
 
 
-def edit_file(path: str, old_text: str, new_text: str) -> str:
+def edit_file(path: str, old_string: str, new_string: str) -> str:
     file = Path(path)
 
     if not file.exists():
@@ -34,18 +34,18 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
 
     file_content = file.read_text(encoding='utf-8')
 
-    if old_text == new_text:
-        return 'old_text and new_text cannot be the same'
+    if old_string == new_string:
+        return 'old_string and new_string cannot be the same'
 
-    count = file_content.count(old_text)
+    count = file_content.count(old_string)
 
     if count == 0:
-        return 'old_text does not have a match in the file'
+        return 'old_string does not have a match in the file'
 
     if count > 1:
-        return 'old_text must be unique'
+        return 'old_string must be unique'
 
-    updated_content = file_content.replace(old_text, new_text, count=1)
+    updated_content = file_content.replace(old_string, new_string, count=1)
 
     try:
         file.write_text(updated_content, encoding='utf-8')
@@ -61,8 +61,8 @@ format_spec: FormatSpec = {
     'prefix': 'Edit ',
     'arguments': [
         {'name': 'path'},
-        {'name': 'old_text', 'style': 'ERROR'},
-        {'name': 'new_text', 'style': 'OK'},
+        {'name': 'old_string', 'style': 'ERROR'},
+        {'name': 'new_string', 'style': 'OK'},
     ],
 }
 
