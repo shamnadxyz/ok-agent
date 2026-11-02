@@ -17,6 +17,10 @@ A minimal CLI coding agent with **zero external package dependencies**.
 - Message history is saved in `~/.local/state/ok/history` as jsonl files.
 - Resume sessions using `ok -r`, which by default resumes the previous session in the current working directory.
 
+### Skills
+
+- Reads skills from `.ok/skills` and `.agents/skills` directories.
+
 ## Configuration
 
 [Example configuration](./examples/config.json)
@@ -25,5 +29,4 @@ A minimal CLI coding agent with **zero external package dependencies**.
 
 - No Compaction.
 - No MCP support.
-- No Skills support.
 - Synchronous.

@@ -20,6 +20,7 @@ from ok_agent.session import (
     find_sessions,
     get_previous_session,
 )
+from ok_agent.skills import get_skills
 from ok_agent.temporary import temporary
 from ok_agent.tools import (
     TOOL_REGISTRY,
@@ -27,13 +28,13 @@ from ok_agent.tools import (
     ToolRegistry,
 )
 from ok_agent.tools.utils import format_tool_call
-from ok_agent.utils import display_text, get_system_prompt
+from ok_agent.utils import display_text
 
 logger = logging.getLogger(__name__)
 
 
 class HistoryReadError(Exception):
-    """Raises when fails to read history."""
+    """Raised when fails to read history."""
 
 
 def get_session_history_file() -> Path:
@@ -144,12 +145,15 @@ def app():
         display_text(f'{e.path}: {e.message}', 'ERROR')
         raise SystemExit(1)
 
+    skills = get_skills()
+
     session = Session(
         history_path=get_session_history_file(),
         project_path=Path.cwd(),
         created_at=datetime.now(UTC),
         model=config.model,
-        messages=[get_system_prompt()],
+        skills=skills,
+        messages=[],
     )
 
     parser = argparse.ArgumentParser(

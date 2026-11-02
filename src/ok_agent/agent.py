@@ -2,6 +2,7 @@ import atexit
 import readline
 import sys
 import termios
+import textwrap
 from logging import getLogger
 from pathlib import Path
 from urllib.error import URLError
@@ -17,10 +18,13 @@ from ok_agent.llama_cpp.tools import (
     tools_to_function_tools,
 )
 from ok_agent.llama_cpp.types import (
+    Content,
     Message,
+    SystemMessage,
 )
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.session import Session, save_history
+from ok_agent.skills import SkillMetadata, skills_to_xml
 from ok_agent.tools import ToolRegistry
 from ok_agent.utils import display_text
 
@@ -32,7 +36,7 @@ class AgentError(Exception):
 
 
 class NoResponseError(AgentError):
-    """Raises when the agent fails to produce a content response."""
+    """Raised when the agent fails to produce a content response."""
 
 
 class LimitError(AgentError):
@@ -50,11 +54,11 @@ class LimitError(AgentError):
 
 
 class TokenLimitError(LimitError):
-    """Raises when the finish reason is length."""
+    """Raised when the finish reason is length."""
 
 
 class TurnLimitError(LimitError):
-    """Raises when the maximum number of turns are exceeded.
+    """Raised when the maximum number of turns are exceeded.
 
     Attributes:
         agent_response: The agent response from the last turn.
@@ -73,9 +77,40 @@ class TurnLimitError(LimitError):
         )
 
 
-def init_completions():
+def get_system_prompt(skills: list[SkillMetadata]) -> SystemMessage:
+    agents = Path('AGENTS.md')
+
+    system_message: Content = [
+        {
+            'type': 'text',
+            'text': textwrap.dedent(f"""\
+                You are a helpful coding agent. 
+
+                cwd:"{Path.cwd()}"
+                Tools will be run relative to this directory.
+                """),
+        },
+    ]
+
+    if agents.exists():
+        try:
+            content = agents.read_text(encoding='utf-8')
+            system_message.append({'type': 'text', 'text': content})
+        except (OSError, ValueError):
+            logger.exception('Error in reading AGENTS.md file')
+
+    if skills and (formatted_skills := skills_to_xml(skills)):
+        system_message.append({'type': 'text', 'text': formatted_skills})
+
+    return {'role': 'system', 'content': system_message}
+
+
+def init_completions(session: Session):
     commands = ['/model', '/continue']
     model_completions = []
+
+    if session.skills:
+        commands.extend(f'/skill:{skill["name"]}' for skill in session.skills)
 
     def complete(text: str, state: int) -> str | None:
         completions = commands
@@ -254,7 +289,10 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
     config = get_config()
 
     init_readline()
-    init_completions()
+    init_completions(session)
+
+    if not session.messages:
+        session.messages.append(get_system_prompt(session.skills))
 
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)

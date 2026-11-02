@@ -1,8 +1,6 @@
 import sys
-import textwrap
 from functools import lru_cache
 from logging import getLogger
-from pathlib import Path
 from typing import Literal
 
 from ok_agent.ansi_sequences import (
@@ -14,38 +12,10 @@ from ok_agent.ansi_sequences import (
     BRIGHT_YELLOW,
     RESET,
 )
-from ok_agent.llama_cpp.types import Content, SystemMessage
 
 logger = getLogger(__name__)
 
-
-def get_system_prompt() -> SystemMessage:
-    agents = Path('AGENTS.md')
-
-    system_message: Content = [
-        {
-            'type': 'text',
-            'text': textwrap.dedent(f"""\
-                You are a helpful coding agent. 
-
-                cwd:"{Path.cwd()}"
-                Tools will be run relative to this directory.
-                """),
-        },
-    ]
-
-    if agents.exists():
-        try:
-            content = agents.read_text(encoding='utf-8')
-            system_message.append({'type': 'text', 'text': content})
-        except (OSError, ValueError):
-            logger.exception('Error in reading AGENTS.md file')
-
-    return {'role': 'system', 'content': system_message}
-
-
 type Style = Literal['ERROR', 'OK', 'WARNING', 'DIM', 'SPECIAL']
-
 
 @lru_cache(maxsize=1)
 def _isatty():
