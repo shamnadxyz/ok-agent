@@ -54,13 +54,21 @@ class Config:
     log_disable: bool = False
 
 
-def get_config_dir() -> Path:
+def get_config_path() -> Path:
     xdg_config_path = os.getenv('XDG_CONFIG_HOME')
+    CONFIG_FILENAME = 'config.json'
+    HOME_CONFIG = Path.home() / f'.{PROGRAM_NAME}' / CONFIG_FILENAME
+    DOT_CONFIG = Path.home() / '.config' / PROGRAM_NAME / CONFIG_FILENAME
 
     if xdg_config_path:
-        return Path(xdg_config_path) / PROGRAM_NAME
+        return Path(xdg_config_path) / PROGRAM_NAME / CONFIG_FILENAME
+
+    if DOT_CONFIG.exists():
+        config_file = DOT_CONFIG
     else:
-        return Path.home() / '.config' / PROGRAM_NAME
+        return HOME_CONFIG
+
+    return config_file
 
 
 class ConfigError(ValidationError):
@@ -78,11 +86,10 @@ def load_config() -> dict:
     Raises:
         ConfigError: if schema validation fails
     """
-    config_dir = get_config_dir()
-    config_file = config_dir / 'config.json'
+    config_file = get_config_path()
 
     try:
-        with open(config_file, 'rb') as f:
+        with open(config_file, encoding='utf-8') as f:
             config = json.load(f)
             validate_config(config, CONFIG_SCHEMA)
             return config
@@ -90,11 +97,11 @@ def load_config() -> dict:
         raise ConfigError(message=e.message, path=str(config_file.resolve()))
     except json.JSONDecodeError as e:
         raise ConfigError(
-            message=str(*e.args),
+            message=str(e),
             path=str(config_file.resolve()),
         )
     except FileNotFoundError:
-        config_dir.mkdir(exist_ok=True)
+        config_file.parent.mkdir(parents=True, exist_ok=True)
         display_text('Press enter for accepting the default')
 
         default_base_url = 'http://localhost:8080/v1'
@@ -119,7 +126,7 @@ def load_config() -> dict:
 
     except OSError as e:
         raise ConfigError(
-            message=str(*e.args),
+            message=str(e),
             path=str(config_file.resolve()),
         )
 
