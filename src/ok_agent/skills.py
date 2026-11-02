@@ -160,6 +160,8 @@ def skills_to_xml(skills: list[SkillMetadata]) -> str | None:
     if len(skills_available) == 0:
         return None
 
+    skills_available.sort(key=lambda skill: skill['name'])
+
     lines: list[str] = ['You have access to the following skills:']
 
     lines.append('<skills>')
