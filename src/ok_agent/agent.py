@@ -119,7 +119,7 @@ def init_completions(session: Session):
 
         if text.startswith('/model'):
             if not model_completions:
-                model_completions.extend(get_model_completions())
+                model_completions.extend([f'/model {model}' for model in get_models()])
 
             completions = model_completions
 
@@ -165,10 +165,6 @@ def init_readline():
     atexit.register(save, h_len, histfile)
 
 
-def get_model_completions() -> list[str]:
-    return [f'/model {model}' for model in get_models()]
-
-
 def handle_model_command(session: Session, query: str):
     models = get_models()
 
@@ -178,7 +174,7 @@ def handle_model_command(session: Session, query: str):
         display_text('Please pass the model id')
         return
 
-    if session.model == selected_model:
+    if selected_model == session.model:
         return
 
     if selected_model not in models:
@@ -190,6 +186,8 @@ def handle_model_command(session: Session, query: str):
 
 
 def agent(
+    api_base_url: str,
+    api_key: str,
     tool_registry: ToolRegistry,
     model: str,
     messages: list[Message],
@@ -200,6 +198,8 @@ def agent(
     """Send query to the agent.
 
     Args:
+        api_base_url: OpenAI compatible API endpoint.
+        api_key: API key.
         query: Query to send.
         tool_registry: Tool registry available to the agent.
         model: Model ID.
@@ -233,6 +233,8 @@ def agent(
     while turn < max_turns:
         try:
             response = completion(
+                api_base_url=api_base_url,
+                api_key=api_key,
                 model=model,
                 messages=messages,
                 tools=function_tools,
@@ -346,6 +348,8 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
 
             agent(
                 query=query,
+                api_base_url=config.api_base_url,
+                api_key=config.api_key,
                 tool_registry=tool_registry,
                 model=session.model,
                 messages=session.messages,

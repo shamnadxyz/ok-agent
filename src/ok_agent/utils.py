@@ -17,6 +17,7 @@ logger = getLogger(__name__)
 
 type Style = Literal['ERROR', 'OK', 'WARNING', 'DIM', 'SPECIAL']
 
+
 @lru_cache(maxsize=1)
 def _isatty():
     return sys.stdout.isatty()

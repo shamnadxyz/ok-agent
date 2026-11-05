@@ -30,25 +30,31 @@ def get_response_error_message(response: urllib.error.HTTPError) -> str:
 
 
 def build_request(
+    api_base_url: str,
     endpoint: Endpoint,
+    api_key: str,
     data: bytes | None = None,
     method: Method = 'GET',
 ) -> urllib.request.Request:
-    config = get_config()
-    api_base_url = config.api_base_url
-    completions_endpoint = f'{api_base_url}{endpoint}'
+    url = f'{api_base_url}{endpoint}'
 
-    request = urllib.request.Request(completions_endpoint, data=data, method=method)
+    request = urllib.request.Request(url, data=data, method=method)
 
-    if config.api_key:
-        request.add_header('Authorization', f'Bearer {config.api_key}')
+    if api_key:
+        request.add_header('Authorization', f'Bearer {api_key}')
 
     return request
 
 
 @lru_cache(maxsize=1)
 def _fetch_models() -> list[str]:
-    request = build_request(endpoint='/models')
+    config = get_config()
+
+    request = build_request(
+        api_base_url=config.api_base_url,
+        api_key=config.api_key,
+        endpoint='/models',
+    )
     with urllib.request.urlopen(request, timeout=5) as response:
         data = json.loads(response.read().decode('utf-8'))
 

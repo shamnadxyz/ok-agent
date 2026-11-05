@@ -221,6 +221,8 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
 
 def completion(
+    api_base_url: str,
+    api_key: str,
     model: str,
     messages: list[Message],
     tools: list[FunctionTool],
@@ -230,6 +232,8 @@ def completion(
     """Sends completion request to messages to llama-cpp server.
 
     Args:
+        api_base_url: OpenAI compatible API endpoint.
+        api_key: API key.
         model: Model ID.
         messages: Message history.
         tools: Tools available to the model.
@@ -244,8 +248,6 @@ def completion(
         NoFinishReasonError: if no finish_reason was received
         URLError
     """
-    completions_endpoint = '/chat/completions'
-
     payload = {
         'model': model,
         'stream': True,
@@ -264,8 +266,10 @@ def completion(
     logger.debug(f'data: {data}')
 
     request = build_request(
-        completions_endpoint,
-        data.encode('utf-8'),
+        api_base_url=api_base_url,
+        api_key=api_key,
+        endpoint='/chat/completions',
+        data=data.encode('utf-8'),
         method='POST',
     )
     request.add_header('Content-Type', 'application/json')
