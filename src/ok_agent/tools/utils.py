@@ -134,20 +134,20 @@ def handle_argument_display(
     if argument_length == 0:
         return None
 
-    if offset != 0 and offset == argument_length or is_final:
+    if (offset != 0 and offset == argument_length) or is_final:
         argument_state['is_complete'] = True
 
-    slice = argument[offset:]
+    chunk = argument[offset:]
 
     if argument_state['is_complete'] and ensure_newline and not argument.endswith('\n'):
         if is_final:
-            return format_text(f'{slice}\n', style)
+            return format_text(f'{chunk}\n', style)
         else:
             return '\n'
 
     argument_state['offset'] = argument_length
 
-    return format_text(slice, style)
+    return format_text(chunk, style)
 
 
 def rescue_partial_json(string: str) -> str | None:
