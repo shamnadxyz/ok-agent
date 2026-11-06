@@ -57,18 +57,18 @@ class Config:
 def get_config_path() -> Path:
     xdg_config_path = os.getenv('XDG_CONFIG_HOME')
     CONFIG_FILENAME = 'config.json'
-    HOME_CONFIG = Path.home() / f'.{PROGRAM_NAME}' / CONFIG_FILENAME
     DOT_CONFIG = Path.home() / '.config' / PROGRAM_NAME / CONFIG_FILENAME
+    HOME_CONFIG = Path.home() / f'.{PROGRAM_NAME}' / CONFIG_FILENAME
 
     if xdg_config_path:
-        return Path(xdg_config_path) / PROGRAM_NAME / CONFIG_FILENAME
+        config_file = Path(xdg_config_path) / PROGRAM_NAME / CONFIG_FILENAME
+        if config_file.exists():
+            return config_file
 
     if DOT_CONFIG.exists():
-        config_file = DOT_CONFIG
-    else:
-        return HOME_CONFIG
+        return DOT_CONFIG
 
-    return config_file
+    return HOME_CONFIG
 
 
 class ConfigError(ValidationError):
