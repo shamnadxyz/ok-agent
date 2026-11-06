@@ -12,10 +12,10 @@ parameter_schema: JSONSchema = {
         'path': {
             'type': 'string',
         },
-        'offset': {
+        'start_line': {
             'type': 'integer',
             'description': 'Line to start reading.',
-            'minimum': 0,
+            'minimum': 1,
         },
         'lines': {
             'type': 'integer',
@@ -47,7 +47,7 @@ def _is_supported_image(file: Path) -> str | None:
 
 def read_file(
     path: str,
-    offset: int = 0,
+    start_line: int = 1,
     lines: int = MAX_OUTPUT_LINES,
 ) -> Content:
     """Read file content.
@@ -56,7 +56,7 @@ def read_file(
 
     Args:
         path: Path to the file.
-        offset: Line to start reading.
+        start_line: Line to start reading.
         lines: Number of lines to read.
     """
     file = Path(path)
@@ -71,8 +71,9 @@ def read_file(
         with open(file) as f:
             contents = []
 
-            if offset > 1:
-                for _ in range(offset - 1):
+            if start_line > 1:
+                lines_to_skip = start_line - 1
+                for _ in range(lines_to_skip):
                     f.readline()
 
             for count, line in enumerate(f, start=1):
@@ -86,8 +87,7 @@ def read_file(
 
             line_count = len(contents)
 
-            start_line = max(1, offset)
-            end_line = line_count + max(0, offset - 1)
+            end_line = line_count + max(0, start_line - 1)
 
             if next_content:
                 return (
