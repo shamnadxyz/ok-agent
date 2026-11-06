@@ -3,6 +3,7 @@ import atexit
 import json
 import logging
 import sqlite3
+import sys
 import textwrap
 import time
 from datetime import UTC, datetime
@@ -33,8 +34,16 @@ from ok_agent.utils import display_text
 logger = logging.getLogger(__name__)
 
 
-class HistoryReadError(Exception):
+class HistoryError(Exception):
+    """Base class for history errors."""
+
+
+class HistoryReadError(HistoryError):
     """Raised when fails to read history."""
+
+
+class HistoryMalformedError(HistoryError):
+    """Raised when the message history is malformed."""
 
 
 def get_session_history_file() -> Path:
@@ -87,6 +96,11 @@ def replay_history(messages: list[Message]):
 
             case 'tool':
                 tool_id = message['tool_call_id']
+                if tool_id not in tool_call_map:
+                    raise HistoryMalformedError(
+                        'Tool call not found for the tool result'
+                    )
+
                 tool_call = tool_call_map[tool_id]
                 content = message['content']
 
@@ -285,7 +299,11 @@ def app():
     display_text('Ok Agent', bold=True)
 
     if session.is_resume:
-        replay_history(session.messages)
+        try:
+            replay_history(session.messages)
+        except HistoryMalformedError as e:
+            display_text(str(e), style='ERROR')
+            raise SystemExit(1)
 
     atexit.register(temporary.remove_temp_files)
     try:
