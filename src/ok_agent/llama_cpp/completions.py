@@ -3,6 +3,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Iterable
 from logging import getLogger
+from typing import Any
 
 from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import (
@@ -225,8 +226,9 @@ def completion(
     api_key: str,
     model: str,
     messages: list[Message],
-    tools: list[FunctionTool],
+    tools: list[FunctionTool] | None = None,
     timeout: int = 300,
+    response_format: dict[str, Any] | None = None,
     chat_template_kwargs: dict | None = None,
 ) -> Response:
     """Sends completion request to messages to llama-cpp server.
@@ -238,6 +240,7 @@ def completion(
         messages: Message history.
         tools: Tools available to the model.
         timeout: Timeout in seconds.
+        response_format: JSON schema for model output.
         chat_template_kwargs: Arguments to the chat template.
 
     Returns:
@@ -251,10 +254,15 @@ def completion(
     payload = {
         'model': model,
         'stream': True,
-        'tools': tools,
         'messages': messages,
         'chat_template_kwargs': chat_template_kwargs,
     }
+
+    if tools:
+        payload['tools'] = tools
+
+    if response_format:
+        payload['response_format'] = response_format
 
     data = json.dumps(
         payload,

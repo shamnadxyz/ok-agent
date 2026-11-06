@@ -5,6 +5,7 @@ import termios
 import textwrap
 from logging import getLogger
 from pathlib import Path
+from typing import Any
 from urllib.error import URLError
 
 from ok_agent.config import get_config
@@ -188,10 +189,11 @@ def handle_model_command(session: Session, query: str):
 def agent(
     api_base_url: str,
     api_key: str,
-    tool_registry: ToolRegistry,
     model: str,
     messages: list[Message],
     preserve_reasoning: bool,
+    tool_registry: ToolRegistry | None = None,
+    response_format: dict[str, Any] | None = None,
     query: str | None = None,
     max_turns: int = 15,
 ) -> str:
@@ -205,6 +207,7 @@ def agent(
         model: Model ID.
         messages: The agent's message history.
         preserve_reasoning: whether to send back the reasoning content.
+        response_format: JSON schema for model output.
         max_turns: The maximum number of turns.
 
     Returns:
@@ -217,7 +220,7 @@ def agent(
         TokenLimitError: if the maximum token limit is reached.
         URLError
     """
-    function_tools = tools_to_function_tools(tool_registry)
+    function_tools = tools_to_function_tools(tool_registry) if tool_registry else None
     turn = 0
 
     message = None
@@ -238,6 +241,7 @@ def agent(
                 model=model,
                 messages=messages,
                 tools=function_tools,
+                response_format=response_format,
                 chat_template_kwargs=kwargs,
             )
             finish_reason = response['finish_reason']
@@ -260,6 +264,9 @@ def agent(
         elif finish_reason == 'tool_calls':
             if 'tool_calls' not in assistant_response:
                 raise CompletionError('missing tool_calls')
+
+            if tool_registry is None:
+                raise CompletionError('No tools available')
 
             messages.append(assistant_response)
             messages.extend(
