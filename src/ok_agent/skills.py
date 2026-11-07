@@ -46,6 +46,8 @@ def read_skill_metadata(file: Path) -> SkillMetadata:
     name = None
     NAME_REGEX = re.compile(r'^[a-z0-9][a-z0-9-]{,62}[a-z0-9]$')
 
+    EXCLUDE_SKILLS_FIELD = 'disable-model-invocation'
+
     description = None
 
     with open(file) as f:
@@ -76,7 +78,7 @@ def read_skill_metadata(file: Path) -> SkillMetadata:
                         'Validation failed: "description" must conform to: Max 1024 characters. Non-empty'
                     )
 
-            elif field == 'disable_model_invocation' and value == 'true':
+            elif field == EXCLUDE_SKILLS_FIELD and value.strip() == 'true':
                 disable_model_invocation = True
 
     if not name or not description:
