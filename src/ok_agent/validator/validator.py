@@ -138,10 +138,10 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
             minimum = property_schema.get('minimum')
             maximum = property_schema.get('maximum')
 
-            if minimum and value < minimum:
+            if minimum is not None and value < minimum:
                 validation_fails.append(f'{property}: is lower than minimum: {minimum}')
 
-            if maximum and value > maximum:
+            if maximum is not None and value > maximum:
                 validation_fails.append(
                     f'{property}: is greater than maximum: {maximum}'
                 )
