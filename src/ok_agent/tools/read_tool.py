@@ -35,13 +35,13 @@ def _is_supported_image(file: Path) -> str | None:
     IMAGE_SIGNATURES = {
         'image/png': b'\x89\x50\x4e\x47\x0d\x0a\x1a\x0a',
         'image/jpeg': b'\xff\xd8\xff',
-        'image/webp': b'RIFF',
+        'image/webp': b'WEBP',
     }
 
     with open(file, 'br') as f:
         header = f.read(16)
         for mime, signature in IMAGE_SIGNATURES.items():
-            if header.startswith(signature):
+            if signature in header:
                 return mime
 
 
