@@ -115,7 +115,7 @@ def load_config() -> dict:
         default_config = Config(
             api_base_url=api_base_url or default_base_url,
             api_key=api_key,
-            model=model_id,
+            model=model_id or default_model,
             prompt='❯ ',
         )
 
