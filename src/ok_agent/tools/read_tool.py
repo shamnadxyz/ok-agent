@@ -92,7 +92,7 @@ def read_file(
             if next_content:
                 return (
                     f'Showing lines: {start_line}-{end_line}'
-                    f'\nContinue with offset: {end_line + 1}'
+                    f'\nContinue with start_line: {end_line + 1}'
                     f'\nContent:'
                     f'\n{content}'
                 )

@@ -77,7 +77,7 @@ def handle_output(
         return (
             'Output got truncated'
             f"\n- Full output saved to '{temp_file}'"
-            f'\n- Read with offset {MAX_OUTPUT_LINES + 1} to continue'
+            f'\n- Read with start_line {MAX_OUTPUT_LINES + 1} to continue'
             '\nOutput:'
             f'\n{truncated_output}'
         )
