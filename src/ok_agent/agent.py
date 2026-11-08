@@ -44,7 +44,7 @@ class LimitError(AgentError):
     """Limit exceeded exceptions.
 
     Attributes:
-        agent_response: The agent response from the last turn.
+        message: The agent response from the last turn.
     """
 
     def __init__(
