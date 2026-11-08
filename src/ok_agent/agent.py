@@ -364,18 +364,9 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
                 preserve_reasoning=config.preserve_reasoning,
             )
 
-        except LimitError as e:
+        except (LimitError, NoResponseError, CompletionError, URLError) as e:
             logger.error(e)
             display_text(str(e), 'ERROR')
-        except NoResponseError as e:
-            logger.error(e)
-            display_text(str(e), 'ERROR')
-        except CompletionError as e:
-            logger.error(e)
-            display_text(str(e), 'ERROR')
-        except URLError as e:
-            logger.error(e.reason)
-            display_text(str(e.reason), 'ERROR')
         except KeyboardInterrupt:
             display_text('\nAgent Interrupted')
             continue
