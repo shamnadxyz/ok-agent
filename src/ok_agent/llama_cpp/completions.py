@@ -126,7 +126,6 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     Raises:
         NoFinishReasonError: if no finish_reason was received
     """
-    role: str | None = None
     contents: list[str] = []
     reasoning_contents: list[str] = []
     tool_calls: list[MessageToolCall] = []
@@ -155,14 +154,13 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
         choice: dict = choices[0]
 
-        finish_reason = choice.get('finish_reason')
+        if stop_reason := choice.get('finish_reason'):
+            finish_reason = stop_reason
 
         delta = choice.get('delta')
 
         if not delta:
             continue
-
-        role = delta.get('role')
 
         reasoning_content = delta.get('reasoning_content')
         content = delta.get('content')
@@ -199,7 +197,7 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     if previously_content and not contents[-1].endswith('\n'):
         display_text()
 
-    response: Response = {'message': {'role': role or 'assistant'}}
+    response: Response = {'message': {'role': 'assistant'}}
 
     if reasoning_contents and config.preserve_reasoning:
         response['message']['reasoning_content'] = ''.join(reasoning_contents)
