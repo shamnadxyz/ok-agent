@@ -22,6 +22,7 @@ parameter_schema: JSONSchema = {
             'description': 'Text to replace with',
         },
     },
+    'additionalProperties': False,
     'required': ['path', 'old_string', 'new_string'],
 }
 

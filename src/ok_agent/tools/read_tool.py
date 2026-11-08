@@ -23,6 +23,7 @@ parameter_schema: JSONSchema = {
             'minimum': 1,
         },
     },
+    'additionalProperties': False,
     'required': ['path'],
 }
 

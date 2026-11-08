@@ -19,6 +19,7 @@ parameter_schema: JSONSchema = {
             'description': 'command timeout in seconds (default: 10)',
         },
     },
+    'additionalProperties': False,
     'required': ['command'],
 }
 
