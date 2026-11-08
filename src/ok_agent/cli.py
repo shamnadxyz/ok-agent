@@ -3,7 +3,6 @@ import atexit
 import json
 import logging
 import sqlite3
-import sys
 import textwrap
 import time
 from datetime import UTC, datetime
