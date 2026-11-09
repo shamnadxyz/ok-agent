@@ -10,13 +10,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ok_agent.agent import (
-    Session,
     run_agent_loop,
 )
 from ok_agent.config import ConfigError, get_config, get_state_dir
 from ok_agent.llama_cpp.types import Message, MessageToolCall
 from ok_agent.loggers import setup_logging
 from ok_agent.session import (
+    Session,
     find_session,
     find_sessions,
     get_previous_session,
