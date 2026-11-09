@@ -279,6 +279,10 @@ def agent(
             raise TokenLimitError(
                 'Maximum token limit reached',
             )
+        else:
+            message = f'Unknown finish_reason: {finish_reason}'
+            display_text(message, style='ERROR')
+            raise CompletionError(message)
 
         turn += 1
 
