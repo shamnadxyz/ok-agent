@@ -71,9 +71,9 @@ def read_history_file(path: Path) -> list[Message]:
                 messages.append(json.loads(line.strip()))
             return messages
     except OSError as e:
-        raise HistoryReadError(str(e))
+        raise HistoryReadError(str(e)) from e
     except json.JSONDecodeError as e:
-        raise HistoryReadError(str(e))
+        raise HistoryReadError(str(e)) from e
 
 
 def replay_history(messages: list[Message]):
@@ -156,7 +156,7 @@ def app():
         logger.debug(config)
 
     except ConfigError as e:
-        display_text(f'{e.path}: {e.message}', 'ERROR')
+        display_text(f'{e.path}: {e}', 'ERROR')
         raise SystemExit(1)
 
     skills = get_skills()
