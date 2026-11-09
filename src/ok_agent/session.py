@@ -94,7 +94,7 @@ def find_sessions(
                 """)
             sessions = cursor.fetchall()
         elif find_in == 'cwd':
-            cwd = str(Path.cwd())
+            cwd = str(Path.cwd().resolve())
             cursor = con.execute(
                 """
                 SELECT *
