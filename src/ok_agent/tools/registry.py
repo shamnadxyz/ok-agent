@@ -45,7 +45,7 @@ class ToolRegistry:
             return f'Invalid arguments JSON: {e}'
 
         except ValidationError as e:
-            return e.message
+            return str(e)
 
         except TypeError as e:
             return f'Inappropriate argument type: {e}'

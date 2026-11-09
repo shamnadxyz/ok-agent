@@ -32,8 +32,7 @@ def _check_arguments(arguments: list[str], data) -> str | None:
 
 
 class ValidationError(Exception):
-    def __init__(self, message: str):
-        self.message = message
+    """Raised when validation fails."""
 
 
 def validate_array(data: list, schema: JSONSchema) -> None:
@@ -95,7 +94,7 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
     try:
         _check_arguments(required_arguments, data)
     except ValidationError as e:
-        validation_fails.append(e.message)
+        validation_fails.append(str(e))
 
     for property, property_schema in properties.items():
         if property not in data:
@@ -115,7 +114,7 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
             try:
                 validate_array(value, property_schema)
             except ValidationError as e:
-                validation_fails.append(f'{property}: {e.message}')
+                validation_fails.append(f'{property}: {e}')
 
         if property_type == 'string':
             min_length = property_schema.get('minLength')
@@ -153,7 +152,7 @@ def validate_object(data: dict, schema: JSONSchema) -> None:
             try:
                 validate_object(value, property_schema)
             except ValidationError as e:
-                validation_fails.append(f'{property}: {e.message}')
+                validation_fails.append(f'{property}: {e}')
 
     if validation_fails:
         raise ValidationError('\n'.join(validation_fails))

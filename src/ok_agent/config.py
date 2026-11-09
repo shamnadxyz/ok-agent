@@ -94,7 +94,7 @@ def load_config() -> dict:
             validate_config(config, CONFIG_SCHEMA)
             return config
     except ValidationError as e:
-        raise ConfigError(message=e.message, path=str(config_file.resolve()))
+        raise ConfigError(message=str(e), path=str(config_file.resolve())) from e
     except json.JSONDecodeError as e:
         raise ConfigError(
             message=str(e),
