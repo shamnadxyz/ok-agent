@@ -3,6 +3,7 @@ import atexit
 import json
 import logging
 import sqlite3
+import termios
 import textwrap
 import time
 from datetime import UTC, datetime
@@ -317,6 +318,10 @@ def app():
         )
     except (EOFError, SystemExit, KeyboardInterrupt):
         display_text('\nExited')
+    except termios.error as e:
+        logger.exception('Termios error')
+        display_text(str(e), style='ERROR')
+        raise SystemExit(1)
 
 
 if __name__ == '__main__':
