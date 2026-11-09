@@ -244,7 +244,12 @@ def app():
             display_text(tool['name'])
         return
 
-    if args.max_turns:
+    if args.max_turns is not None:
+        if args.max_turns <= 0:
+            message = f"Ignoring max_turns: '{args.max_turns}'. max_turns must be a positive number."
+            logger.warning(message)
+            display_text(message, style='WARNING')
+
         config.max_turns = args.max_turns
 
     if args.list_history:

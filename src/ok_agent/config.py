@@ -19,7 +19,7 @@ CONFIG_SCHEMA: ObjectSchema = {
         'preserve_reasoning': {'type': 'boolean'},
         'model': {'type': 'string'},
         'prompt': {'type': 'string'},
-        'max_turns': {'type': 'integer'},
+        'max_turns': {'type': 'integer', 'minimum': 1},
         'show_tool_result': {'type': 'boolean'},
         'log_directory': {'type': 'string'},
         'log_filename': {'type': 'string'},
@@ -99,7 +99,7 @@ def load_config() -> dict:
         raise ConfigError(
             message=str(e),
             path=str(config_file.resolve()),
-        )
+        ) from e
     except FileNotFoundError:
         config_file.parent.mkdir(parents=True, exist_ok=True)
         display_text('Press enter for accepting the default')
@@ -128,7 +128,7 @@ def load_config() -> dict:
         raise ConfigError(
             message=str(e),
             path=str(config_file.resolve()),
-        )
+        ) from e
 
 
 _config_cache: Config | None = None
