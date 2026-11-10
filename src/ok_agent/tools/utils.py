@@ -198,8 +198,13 @@ def rescue_partial_json(string: str) -> str | None:
                 return None
             open_delimiters.pop()
 
+    closing_delimiters: list[str] = []
+
+    if escape_next:
+        closing_delimiters.append(BACKSLASH)
+
     if in_string:
-        open_delimiters.append(QUOTE)
+        closing_delimiters.append(QUOTE)
 
     if not open_delimiters:
         return string
@@ -207,10 +212,10 @@ def rescue_partial_json(string: str) -> str | None:
     # Add the closing delimiters
     for char in reversed(open_delimiters):
         if char == BRACES_OPEN:
-            string += BRACES_CLOSE
+            closing_delimiters.append(BRACES_CLOSE)
         elif char == BRACKET_OPEN:
-            string += BRACKET_CLOSE
+            closing_delimiters.append(BRACKET_CLOSE)
         else:
-            string += QUOTE
+            closing_delimiters.append(QUOTE)
 
-    return string
+    return string + ''.join(closing_delimiters)
