@@ -1,4 +1,4 @@
-from typing import Literal, NotRequired, TypedDict
+from typing import Literal, NotRequired, TypedDict, TypeGuard
 
 from ok_agent.validator import JSONSchema
 
@@ -80,3 +80,7 @@ type Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage
 class Response(TypedDict, total=False):
     message: AssistantMessage
     finish_reason: FinishReason
+
+
+def is_assistant_message(message: Message) -> TypeGuard[AssistantMessage]:
+    return message['role'] == 'assistant'

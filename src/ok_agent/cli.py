@@ -272,7 +272,7 @@ def app():
             display_text(f'{entry["id"]}: {short_prompt}')
         return
 
-    if args.resume:
+    if args.resume is not None:
         session.is_resume = True
         try:
             if args.resume == -1:

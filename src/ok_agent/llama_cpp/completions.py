@@ -5,7 +5,6 @@ from collections.abc import Iterable
 from logging import getLogger
 from typing import Any
 
-from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import (
     FinishReason,
     Function,
@@ -133,8 +132,6 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     tool_display_states: ToolDisplayStates = {}
 
-    config = get_config()
-
     previously_reasoning = False
     previously_content = False
 
@@ -199,7 +196,7 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
 
     response: Response = {'message': {'role': 'assistant'}}
 
-    if reasoning_contents and config.preserve_reasoning:
+    if reasoning_contents:
         response['message']['reasoning_content'] = ''.join(reasoning_contents)
 
     if contents:

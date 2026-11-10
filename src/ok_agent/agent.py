@@ -19,9 +19,11 @@ from ok_agent.llama_cpp.tools import (
     tools_to_function_tools,
 )
 from ok_agent.llama_cpp.types import (
+    AssistantMessage,
     Content,
     Message,
     SystemMessage,
+    is_assistant_message,
 )
 from ok_agent.llama_cpp.utils import get_models
 from ok_agent.session import Session, save_history
@@ -186,11 +188,18 @@ def handle_model_command(session: Session, query: str):
     display_text(f'Selected model: {selected_model}')
 
 
+def remove_reasoning(assistant_message: AssistantMessage) -> Message:
+    """Returns AssistantMessage with reasoning_content removed."""
+    message: Message = {**assistant_message}
+    message.pop('reasoning_content', None)
+    return message
+
+
 def agent(
     api_base_url: str,
     api_key: str,
     model: str,
-    messages: list[Message],
+    message_history: list[Message],
     preserve_reasoning: bool,
     tool_registry: ToolRegistry | None = None,
     response_format: dict[str, Any] | None = None,
@@ -205,7 +214,7 @@ def agent(
         query: Query to send.
         tool_registry: Tool registry available to the agent.
         model: Model ID.
-        messages: The agent's message history.
+        message_history: The agent's message history.
         preserve_reasoning: whether to send back the reasoning content.
         response_format: JSON schema for model output.
         max_turns: The maximum number of turns.
@@ -227,11 +236,19 @@ def agent(
 
     if query:
         user_message: Message = {'role': 'user', 'content': query}
-        messages.append(user_message)
+        message_history.append(user_message)
 
     kwargs = {
         'preserve_thinking': preserve_reasoning,
     }
+
+    if preserve_reasoning:
+        messages = message_history
+    else:
+        messages = [
+            remove_reasoning(message) if is_assistant_message(message) else message
+            for message in message_history
+        ]
 
     while turn < max_turns:
         try:
@@ -258,7 +275,7 @@ def agent(
             if 'content' not in assistant_response:
                 raise CompletionError('missing content')
 
-            messages.append(assistant_response)
+            message_history.append(assistant_response)
             break
 
         elif finish_reason == 'tool_calls':
@@ -268,13 +285,20 @@ def agent(
             if tool_registry is None:
                 raise CompletionError('No tools available')
 
-            messages.append(assistant_response)
-            messages.extend(
-                handle_tool_calls(
-                    tool_registry=tool_registry,
-                    tool_calls=assistant_response['tool_calls'],
-                )
+            message_history.append(assistant_response)
+
+            if preserve_reasoning:
+                messages.append(assistant_response)
+            else:
+                messages.append(remove_reasoning(assistant_response))
+
+            tool_results = handle_tool_calls(
+                tool_registry=tool_registry,
+                tool_calls=assistant_response['tool_calls'],
             )
+            message_history.extend(tool_results)
+            messages.extend(tool_results)
+
         elif finish_reason == 'length':
             raise TokenLimitError(
                 'Maximum token limit reached',
@@ -363,7 +387,7 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
                 api_key=config.api_key,
                 tool_registry=tool_registry,
                 model=session.model,
-                messages=session.messages,
+                message_history=session.messages,
                 max_turns=config.max_turns,
                 preserve_reasoning=config.preserve_reasoning,
             )
