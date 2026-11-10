@@ -66,7 +66,7 @@ def handle_output(
     message = '\n'.join(message_lines)
 
     split_messages = message.splitlines()
-    if len(split_messages) < MAX_OUTPUT_LINES:
+    if len(split_messages) <= MAX_OUTPUT_LINES:
         return message
 
     truncated_output = '\n'.join(split_messages[:MAX_OUTPUT_LINES])
