@@ -23,7 +23,7 @@ A minimal CLI coding agent with **zero external package dependencies**.
 
 ## Configuration
 
-[Example configuration](./examples/config.json)
+[Example configuration](./examples/config.json.example)
 
 ## Limitations
 
