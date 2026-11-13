@@ -31,7 +31,7 @@ def edit_file(path: str, old_string: str, new_string: str) -> str:
     file = Path(path)
 
     if not file.exists():
-        return f"File '{file.name}' does not exists"
+        return f"File '{file.name}' does not exist"
 
     file_content = file.read_text(encoding='utf-8')
 
