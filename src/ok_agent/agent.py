@@ -260,7 +260,7 @@ def agent(
     }
 
     if preserve_reasoning:
-        messages = message_history
+        messages = message_history.copy()
     else:
         messages = [
             remove_reasoning(message) if is_assistant_message(message) else message
