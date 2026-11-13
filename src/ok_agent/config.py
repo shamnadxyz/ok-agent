@@ -1,6 +1,6 @@
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -88,7 +88,7 @@ def _create_config(config_file: Path) -> dict:
     default_model = 'llama'
     model_id = input(f"model id: (default: '{default_model}'): ")
 
-    config = vars(
+    config = asdict(
         Config(
             api_base_url=api_base_url or default_base_url,
             api_key=api_key,
