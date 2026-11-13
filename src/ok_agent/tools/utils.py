@@ -1,4 +1,5 @@
 import json
+from typing import NamedTuple
 
 from ok_agent.llama_cpp.types import MessageToolCall
 from ok_agent.tools import TOOL_REGISTRY, ToolNotFoundError
@@ -9,6 +10,11 @@ from ok_agent.tools.types import (
     ToolDisplayState,
 )
 from ok_agent.utils import display_text, format_text
+
+
+class PartialJsonResult(NamedTuple):
+    json: str
+    is_complete: bool
 
 
 def is_complete(name: str, state: ToolDisplayState) -> bool:
@@ -26,23 +32,17 @@ def is_complete(name: str, state: ToolDisplayState) -> bool:
 def format_tool_call(
     tool_call: MessageToolCall,
     state: ToolDisplayState,
-    is_final: bool = False,
 ) -> str | None:
     """Returns formatted tool call for displaying.
 
     Args:
         state: Used to track the progress of printed tool argument.
         arguments: Tool request JSON string.
-        is_final: If parsing the complete tool_call.
     """
-
-    completed_arguments = rescue_partial_json(tool_call['function']['arguments'])
-
-    if completed_arguments is None:
-        return
+    result = rescue_partial_json(tool_call['function']['arguments'])
 
     try:
-        arguments = json.loads(completed_arguments)
+        arguments = json.loads(result.json)
     except json.JSONDecodeError:
         return
 
@@ -81,7 +81,7 @@ def format_tool_call(
                 argument_format=argument_format,
                 state=state,
                 arguments=arguments,
-                is_final=is_final,
+                is_final=result.is_complete,
             )
             for argument_format in argument_formats
         )
@@ -150,15 +150,16 @@ def handle_argument_display(
     return format_text(chunk, style)
 
 
-def rescue_partial_json(string: str) -> str | None:
+def rescue_partial_json(string: str) -> PartialJsonResult:
     """Scans through the JSON string and adds the missing closing delimiters.
 
     Args:
         string: incomplete JSON string.
 
     Returns:
-        Completed JSON string or None if a closing delimiter is encountered
-        without a matching opening delimiter.
+        A PartialJsonResult with the repaired JSON string and a flag indicating
+        whether the input was structurally complete. For mismatched delimiters,
+        returns the original string and False.
     """
     BRACES_OPEN = '{'
     BRACES_CLOSE = '}'
@@ -167,7 +168,7 @@ def rescue_partial_json(string: str) -> str | None:
     QUOTE = '"'
     BACKSLASH = '\\'
 
-    open_delimiters: list[str] = []
+    closing_delimiters: list[str] = []
     escape_next = False
     in_string = False
 
@@ -187,35 +188,28 @@ def rescue_partial_json(string: str) -> str | None:
         if in_string:
             continue
 
-        if char == BRACES_OPEN or char == BRACKET_OPEN:
-            open_delimiters.append(char)
-        elif char == BRACES_CLOSE:
-            if not open_delimiters or open_delimiters[-1] != BRACES_OPEN:
-                return None
-            open_delimiters.pop()
-        elif char == BRACKET_CLOSE:
-            if not open_delimiters or open_delimiters[-1] != BRACKET_OPEN:
-                return None
-            open_delimiters.pop()
-
-    closing_delimiters: list[str] = []
-
-    if escape_next:
-        closing_delimiters.append(BACKSLASH)
-
-    if in_string:
-        closing_delimiters.append(QUOTE)
-
-    if not open_delimiters:
-        return string
-
-    # Add the closing delimiters
-    for char in reversed(open_delimiters):
         if char == BRACES_OPEN:
             closing_delimiters.append(BRACES_CLOSE)
         elif char == BRACKET_OPEN:
             closing_delimiters.append(BRACKET_CLOSE)
-        else:
-            closing_delimiters.append(QUOTE)
+        elif char == BRACES_CLOSE:
+            if not closing_delimiters or closing_delimiters[-1] != BRACES_CLOSE:
+                return PartialJsonResult(string, is_complete=False)
+            closing_delimiters.pop()
+        elif char == BRACKET_CLOSE:
+            if not closing_delimiters or closing_delimiters[-1] != BRACKET_CLOSE:
+                return PartialJsonResult(string, is_complete=False)
+            closing_delimiters.pop()
 
-    return string + ''.join(closing_delimiters)
+    if escape_next:
+        string = string[:-1]
+
+    if in_string:
+        closing_delimiters.append(QUOTE)
+
+    if not closing_delimiters:
+        return PartialJsonResult(string, is_complete=True)
+
+    return PartialJsonResult(
+        string + ''.join(reversed(closing_delimiters)), is_complete=False
+    )

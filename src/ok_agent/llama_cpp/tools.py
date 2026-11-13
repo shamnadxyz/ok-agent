@@ -65,7 +65,6 @@ def handle_tool_calls(
         formatted_tool_args = format_tool_call(
             tool_call=tool_call,
             state={'initialized': False, 'argument_states': {}},
-            is_final=True,
         )
 
         if formatted_tool_args is not None:

@@ -107,7 +107,6 @@ def replay_history(messages: list[Message]):
                 formatted_text = format_tool_call(
                     tool_call=tool_call,
                     state={'initialized': False, 'argument_states': {}},
-                    is_final=True,
                 )
 
                 if formatted_text is None:
