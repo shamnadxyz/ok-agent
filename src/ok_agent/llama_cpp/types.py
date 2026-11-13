@@ -3,7 +3,15 @@ from typing import Literal, NotRequired, TypedDict, TypeGuard
 from ok_agent.validator import JSONSchema
 
 type Role = Literal['user', 'tool', 'assistant', 'system']
-type FinishReason = Literal['length', 'stop', 'tool_calls']
+
+type FinishReason = Literal[
+    'length',
+    'stop',
+    'tool_calls',
+    'content_filter',
+    'function_call',
+]
+
 type ToolType = Literal['function']
 
 

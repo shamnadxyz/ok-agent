@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import URLError
 
-from ok_agent.config import get_config
+from ok_agent.config import Config
 from ok_agent.llama_cpp.completions import (
     CompletionError,
     NoFinishReasonError,
@@ -25,7 +25,7 @@ from ok_agent.llama_cpp.types import (
     SystemMessage,
     is_assistant_message,
 )
-from ok_agent.llama_cpp.utils import get_models
+from ok_agent.llama_cpp.utils import ModelFetchError, get_models
 from ok_agent.session import Session, save_history
 from ok_agent.skills import SkillMetadata, skills_to_xml
 from ok_agent.tools import ToolRegistry
@@ -108,9 +108,23 @@ def get_system_prompt(skills: list[SkillMetadata]) -> SystemMessage:
     return {'role': 'system', 'content': system_message}
 
 
-def init_completions(session: Session):
-    commands = ['/model', '/continue']
-    model_completions = []
+def update_models(session: Session, api_base_url: str, api_key: str) -> bool:
+    try:
+        models = get_models(api_base_url, api_key)
+    except ModelFetchError as e:
+        logger.exception('Failed to update models')
+        display_text(str(e), 'ERROR')
+        return False
+
+    session.models = models
+    return True
+
+
+def init_completions(session: Session, config: Config):
+    commands = ['/model', '/continue', '/fetch-models']
+
+    if session.model is None and session.models is None:
+        update_models(session, config.api_base_url, config.api_key)
 
     if session.skills:
         commands.extend(f'/skill:{skill["name"]}' for skill in session.skills)
@@ -121,10 +135,11 @@ def init_completions(session: Session):
             return None
 
         if text.startswith('/model'):
-            if not model_completions:
-                model_completions.extend([f'/model {model}' for model in get_models()])
+            if session.models is None:
+                update_models(session, config.api_base_url, config.api_key)
 
-            completions = model_completions
+            if session.models:
+                completions = [f'/model {model}' for model in session.models]
 
         candidates = [command for command in completions if command.startswith(text)]
 
@@ -138,11 +153,9 @@ def init_completions(session: Session):
     readline.set_completer_delims('')
 
 
-def init_readline():
+def init_readline(history_length: int):
     home = Path.home()
     histfile = home / '.ok_history'
-    config = get_config()
-    prompt_history_length = config.prompt_history_length
 
     readline.parse_and_bind(r'set completion-ignore-case on')
     readline.parse_and_bind(r'set enable-bracketed-paste on')
@@ -162,14 +175,17 @@ def init_readline():
 
     def save(prev_h_len, histfile):
         new_h_len = readline.get_current_history_length()
-        readline.set_history_length(prompt_history_length)
+        readline.set_history_length(history_length)
         readline.append_history_file(new_h_len - prev_h_len, histfile)
 
     atexit.register(save, h_len, histfile)
 
 
-def handle_model_command(session: Session, query: str):
-    models = get_models()
+def handle_model_command(session: Session, query: str, config: Config):
+    if session.models is None and not update_models(
+        session, config.api_base_url, config.api_key
+    ):
+        return
 
     selected_model = query.removeprefix('/model').strip()
 
@@ -180,7 +196,7 @@ def handle_model_command(session: Session, query: str):
     if selected_model == session.model:
         return
 
-    if selected_model not in models:
+    if not session.models or selected_model not in session.models:
         display_text(f"model '{selected_model}' not found", 'ERROR')
         return
 
@@ -201,6 +217,7 @@ def agent(
     model: str,
     message_history: list[Message],
     preserve_reasoning: bool,
+    show_tool_result: bool,
     tool_registry: ToolRegistry | None = None,
     response_format: dict[str, Any] | None = None,
     query: str | None = None,
@@ -295,6 +312,7 @@ def agent(
             tool_results = handle_tool_calls(
                 tool_registry=tool_registry,
                 tool_calls=assistant_response['tool_calls'],
+                show_tool_result=show_tool_result,
             )
             message_history.extend(tool_results)
             messages.extend(tool_results)
@@ -304,7 +322,8 @@ def agent(
                 'Maximum token limit reached',
             )
         else:
-            message = f'Unknown finish_reason: {finish_reason}'
+            message = f'Unexpected finish_reason: {finish_reason}'
+            logger.warning(message)
             display_text(message, style='ERROR')
             raise CompletionError(message)
 
@@ -322,11 +341,13 @@ def agent(
     return message
 
 
-def run_agent_loop(tool_registry: ToolRegistry, session: Session):
-    config = get_config()
-
-    init_readline()
-    init_completions(session)
+def run_agent_loop(
+    tool_registry: ToolRegistry,
+    session: Session,
+    config: Config,
+):
+    init_readline(history_length=config.prompt_history_length)
+    init_completions(session, config)
 
     if not session.messages:
         session.messages.append(get_system_prompt(session.skills))
@@ -355,7 +376,12 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
             continue
 
         if query.startswith('/model'):
-            handle_model_command(session, query)
+            handle_model_command(session, query, config)
+            continue
+
+        if query.startswith('/fetch-models'):
+            if update_models(session, config.api_base_url, config.api_key):
+                display_text('Updated model list')
             continue
 
         if session.model is None:
@@ -390,6 +416,7 @@ def run_agent_loop(tool_registry: ToolRegistry, session: Session):
                 message_history=session.messages,
                 max_turns=config.max_turns,
                 preserve_reasoning=config.preserve_reasoning,
+                show_tool_result=config.show_tool_result,
             )
 
         except (LimitError, NoResponseError, CompletionError, URLError) as e:

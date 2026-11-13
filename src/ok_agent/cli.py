@@ -12,7 +12,7 @@ from pathlib import Path
 from ok_agent.agent import (
     run_agent_loop,
 )
-from ok_agent.config import ConfigError, get_config, get_state_dir
+from ok_agent.config import Config, ConfigError, get_config, get_state_dir
 from ok_agent.llama_cpp.types import Message, MessageToolCall
 from ok_agent.loggers import setup_logging
 from ok_agent.session import (
@@ -76,9 +76,7 @@ def read_history_file(path: Path) -> list[Message]:
         raise HistoryReadError(str(e)) from e
 
 
-def replay_history(messages: list[Message]):
-    config = get_config()
-
+def replay_history(messages: list[Message], config: Config):
     tool_call_map: dict[str, MessageToolCall] = {}
 
     for message in messages:
@@ -141,22 +139,20 @@ def app():
     global TOOL_REGISTRY
     try:
         config = get_config()
-        setup_logging(
-            directory=config.log_directory,
-            filename=config.log_filename,
-            max_bytes=config.log_max_bytes,
-            backup_count=config.log_backup_count,
-            log_level=config.log_level,
-        )
-
-        if config.log_disable:
-            logging.disable(logging.CRITICAL)
-
-        logger.debug(config)
-
     except ConfigError as e:
         display_text(f'{e.path}: {e}', 'ERROR')
         raise SystemExit(1)
+
+    setup_logging(
+        directory=config.log_directory,
+        filename=config.log_filename,
+        max_bytes=config.log_max_bytes,
+        backup_count=config.log_backup_count,
+        log_level=config.log_level,
+    )
+
+    if config.log_disable:
+        logging.disable(logging.CRITICAL)
 
     skills = get_skills()
 
@@ -165,6 +161,7 @@ def app():
         project_path=Path.cwd(),
         created_at=datetime.now(UTC),
         model=config.model,
+        models=None,
         skills=skills,
         messages=[],
     )
@@ -304,7 +301,7 @@ def app():
 
     if session.is_resume:
         try:
-            replay_history(session.messages)
+            replay_history(session.messages, config)
         except HistoryMalformedError as e:
             display_text(str(e), style='ERROR')
             raise SystemExit(1)
@@ -314,6 +311,7 @@ def app():
         run_agent_loop(
             tool_registry=TOOL_REGISTRY,
             session=session,
+            config=config,
         )
     except (EOFError, SystemExit, KeyboardInterrupt):
         display_text('\nExited')

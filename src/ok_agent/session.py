@@ -22,6 +22,7 @@ class Session:
     created_at: datetime
     messages: list[Message]
     model: str | None
+    models: list[str] | None
     skills: list[SkillMetadata]
     initial_query: str | None = None
     is_resume: bool = False

@@ -1,6 +1,5 @@
 from logging import getLogger
 
-from ok_agent.config import get_config
 from ok_agent.llama_cpp.types import FunctionTool, MessageToolCall, ToolMessage
 from ok_agent.tools import ToolRegistry
 from ok_agent.tools.utils import format_tool_call
@@ -34,10 +33,8 @@ def tools_to_function_tools(tool_registry: ToolRegistry) -> list[FunctionTool]:
 def handle_tool_calls(
     tool_registry: ToolRegistry,
     tool_calls: list[MessageToolCall],
+    show_tool_result: bool,
 ) -> list[ToolMessage]:
-
-    config = get_config()
-
     tool_messages: list[ToolMessage] = []
 
     tool_texts: list[str] = []
@@ -83,7 +80,7 @@ def handle_tool_calls(
 
             tool_texts.append(formatted_tool_call)
 
-    if config.show_tool_result:
+    if show_tool_result:
         clear_lines_above(count=newlines)
 
         for text in tool_texts:

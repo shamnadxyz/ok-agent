@@ -131,23 +131,14 @@ def load_config() -> dict:
         ) from e
 
 
-_config_cache: Config | None = None
-
-
 def get_config() -> Config:
     """Returns validated configuration.
 
     Raises:
         ConfigError: if configuration validation fails
     """
-    global _config_cache
-    if _config_cache:
-        return _config_cache
-
     config = load_config()
-    _config_cache = Config(**config)
-
-    return _config_cache
+    return Config(**config)
 
 
 def get_state_dir() -> Path:
