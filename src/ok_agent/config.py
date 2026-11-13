@@ -77,68 +77,53 @@ class ConfigError(ValidationError):
         super().__init__(message)
 
 
-def load_config() -> dict:
-    """Loads configuration file config.json and validates it.
+def _create_config(config_file: Path) -> dict:
+    """Initialize the configuration file."""
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    display_text('Press enter for accepting the default')
 
-    Returns:
-        Validated configuration dict
+    default_base_url = 'http://localhost:9931/v1'
+    api_base_url = input(f"llama.cpp base url (default: '{default_base_url}'): ")
+    api_key = input("llama.cpp API key (default: ''): ")
+    default_model = 'llama'
+    model_id = input(f"model id: (default: '{default_model}'): ")
 
-    Raises:
-        ConfigError: if schema validation fails
-    """
-    config_file = get_config_path()
-
-    try:
-        with open(config_file, encoding='utf-8') as f:
-            config = json.load(f)
-            validate_config(config, CONFIG_SCHEMA)
-            return config
-    except ValidationError as e:
-        raise ConfigError(message=str(e), path=str(config_file.resolve())) from e
-    except json.JSONDecodeError as e:
-        raise ConfigError(
-            message=str(e),
-            path=str(config_file.resolve()),
-        ) from e
-    except FileNotFoundError:
-        config_file.parent.mkdir(parents=True, exist_ok=True)
-        display_text('Press enter for accepting the default')
-
-        default_base_url = 'http://localhost:8080/v1'
-        api_base_url = input(f"llama.cpp base url (default: '{default_base_url}'): ")
-
-        api_key = input("llama.cpp API key (default: ''): ")
-
-        default_model = 'llama'
-        model_id = input(f"model id: (default: '{default_model}'): ")
-
-        default_config = Config(
+    config = vars(
+        Config(
             api_base_url=api_base_url or default_base_url,
             api_key=api_key,
             model=model_id or default_model,
             prompt='❯ ',
         )
+    )
+    config_file.write_text(json.dumps(config, indent=2), encoding='utf-8')
+    return config
 
-        config_json = json.dumps(vars(default_config), indent=2)
-        config_file.write_text(config_json, encoding='utf-8')
 
-        return load_config()
+def get_config() -> Config:
+    """Loads validated configuration, prompting to create it if missing.
 
-    except OSError as e:
+    Raises:
+        ConfigError: If configuration cannot be read, created, or validated.
+    """
+    config_file = get_config_path()
+
+    try:
+        if config_file.exists():
+            with open(config_file, encoding='utf-8') as f:
+                config = json.load(f)
+        else:
+            config = _create_config(config_file)
+
+        if not isinstance(config, dict):
+            raise ValidationError('Configuration must be a JSON object')
+        validate_config(config, CONFIG_SCHEMA)
+        return Config(**config)
+    except (ValidationError, json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
         raise ConfigError(
             message=str(e),
             path=str(config_file.resolve()),
         ) from e
-
-
-def get_config() -> Config:
-    """Returns validated configuration.
-
-    Raises:
-        ConfigError: if configuration validation fails
-    """
-    config = load_config()
-    return Config(**config)
 
 
 def get_state_dir() -> Path:
