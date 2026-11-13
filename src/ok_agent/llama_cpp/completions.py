@@ -109,11 +109,11 @@ def _parse_tool_stream(
         if argument:
             tool_calls[idx]['function']['arguments'] += argument
 
-        if formatted_text := format_tool_call(
-            tool_call=tool_calls[idx],
-            state=tool_states[function_id],
-        ):
-            display_text(formatted_text, end='')
+            if formatted_text := format_tool_call(
+                tool_call=tool_calls[idx],
+                state=tool_states[function_id],
+            ):
+                display_text(formatted_text, end='')
 
 
 def _handle_stream(stream: Iterable[bytes]) -> Response:

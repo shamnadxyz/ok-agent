@@ -201,9 +201,6 @@ def rescue_partial_json(string: str) -> PartialJsonResult:
                 return PartialJsonResult(string, is_complete=False)
             closing_delimiters.pop()
 
-    if escape_next:
-        string = string[:-1]
-
     if in_string:
         closing_delimiters.append(QUOTE)
 
