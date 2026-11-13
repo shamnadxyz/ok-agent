@@ -68,6 +68,16 @@ def read_file(
     if not (file.is_file() or file.is_symlink()):
         return f"reading '{file.name}' is not supported"
 
+    if mime_type := _is_supported_image(file):
+        image_bytes = file.read_bytes()
+        data = base64.b64encode(image_bytes).decode('ascii')
+        return [
+            {
+                'type': 'image_url',
+                'image_url': {'url': f'data:{mime_type};base64,{data}'},
+            }
+        ]
+
     try:
         with open(file) as f:
             contents = []
@@ -100,21 +110,8 @@ def read_file(
 
             return content
 
-    except UnicodeDecodeError as e:
-        if mime_type := _is_supported_image(file):
-            image_bytes = file.read_bytes()
-            data = base64.b64encode(image_bytes).decode('ascii')
-            return [
-                {
-                    'type': 'image_url',
-                    'image_url': {'url': f'data:{mime_type};base64,{data}'},
-                }
-            ]
-
-        return f"Failed to read '{file.name}' {type(e).__name__} {e}"
-
-    except OSError as e:
-        return f"Failed to read '{file.name}' {type(e).__name__} {e}"
+    except (UnicodeDecodeError, OSError) as e:
+        return f"Failed to read '{file.resolve()}' {type(e).__name__} {e}"
     except TypeError as e:
         return f"Type Error '{file.name}' {type(e).__name__} {e}"
 
