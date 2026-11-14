@@ -128,7 +128,7 @@ def handle_argument_display(
 
     offset = argument_state['offset']
 
-    argument: str = arguments[name]
+    argument: str = str(arguments[name])
     argument_length = len(argument)
 
     if argument_length == 0:
