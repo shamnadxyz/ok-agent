@@ -1,5 +1,4 @@
 import sys
-from functools import lru_cache
 from logging import getLogger
 from typing import Literal
 
@@ -18,18 +17,13 @@ logger = getLogger(__name__)
 type Style = Literal['ERROR', 'OK', 'WARNING', 'DIM', 'SPECIAL']
 
 
-@lru_cache(maxsize=1)
-def _isatty():
-    return sys.stdout.isatty()
-
-
 def format_text(
     text: str = '',
     style: Style | None = None,
     bold: bool = False,
 ):
     """Returns text formatted with ANSII escape sequences."""
-    if not _isatty():
+    if not sys.stdout.isatty():
         return text
 
     if bold:
