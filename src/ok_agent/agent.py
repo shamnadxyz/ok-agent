@@ -388,7 +388,7 @@ def run_agent_loop(
             display_text('Please select a model with /model command', 'WARNING')
             continue
 
-        if query.strip() == '/continue':
+        if query == '/continue':
             if len(session.messages) == 0:
                 display_text('History empty', style='WARNING')
                 continue
