@@ -242,8 +242,8 @@ def completion(
         Response with AssistantMessage and finish_reason
 
     Raises:
-        CompletionError: if HTTPError occured
-        NoFinishReasonError: if no finish_reason was received
+        CompletionError: If the request fails with an HTTP error or times out.
+        NoFinishReasonError: If no finish_reason was received
         URLError
     """
     payload = {
@@ -284,3 +284,5 @@ def completion(
     except urllib.error.HTTPError as e:
         error_message = get_response_error_message(e)
         raise CompletionError(error_message)
+    except TimeoutError as e:
+        raise CompletionError('Completion request timed out') from e
