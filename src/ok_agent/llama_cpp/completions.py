@@ -17,6 +17,7 @@ from ok_agent.llama_cpp.utils import (
     build_request,
     get_response_error_message,
 )
+from ok_agent.sse import parse_event_stream
 from ok_agent.tools import (
     ToolDisplayStates,
 )
@@ -36,30 +37,6 @@ class NoFinishReasonError(Exception):
     def __init__(self, message, response: Response):
         super().__init__(message)
         self.response = response
-
-
-def _parse_data(event: str) -> dict | None:
-    """Extract the json data from the SSE data event.
-
-    Args:
-      data_event: SSE data event line
-    Returns:
-      Object loaded from JSON
-    """
-    if not event.startswith('data: '):
-        return None
-
-    json_data = event.removeprefix('data: ')
-
-    if json_data == '[DONE]':
-        return None
-
-    try:
-        return json.loads(json_data)
-
-    except json.JSONDecodeError:
-        logger.exception('Invalid JSON')
-        return None
 
 
 def _parse_tool_stream(
@@ -135,13 +112,11 @@ def _handle_stream(stream: Iterable[bytes]) -> Response:
     previously_reasoning = False
     previously_content = False
 
-    for line in stream:
-        decoded_response = line.decode('utf-8', errors='ignore').strip()
-        if decoded_response == '':
-            continue
-
-        data = _parse_data(decoded_response)
-        if data is None:
+    for event in parse_event_stream(stream):
+        try:
+            data = json.loads(event.data)
+        except json.JSONDecodeError:
+            logger.exception('Invalid JSON')
             continue
 
         choices = data.get('choices', [])
