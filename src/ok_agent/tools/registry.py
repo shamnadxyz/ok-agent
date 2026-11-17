@@ -2,11 +2,7 @@ import json
 from logging import getLogger
 
 from ok_agent.llama_cpp.types import Content
-from ok_agent.tools.edit_tool import edit_tool
-from ok_agent.tools.read_tool import read_tool
-from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.types import Tool
-from ok_agent.tools.write_tool import write_tool
 from ok_agent.validator import validate_object as validate_tool
 from ok_agent.validator.validator import ValidationError
 
@@ -17,13 +13,17 @@ class ToolNotFoundError(Exception):
     def __init__(self, name):
         self.name = name
 
-    def __str__(self):
-        return f"Tool not found: '{self.name}'"
+        super().__init__(f"Tool not found: '{self.name}'")
 
 
 class ToolRegistry:
     def __init__(self, tools: list[Tool]):
-        self._tools = {tool['name']: tool for tool in tools}
+        self._tools = {tool.name: tool for tool in tools}
+
+    @property
+    def tools(self) -> list[Tool]:
+        """List of available Tool objects."""
+        return [tool for tool in self._tools.values()]
 
     def execute_tool(self, name: str, arguments: str) -> Content:
         tool = self._tools.get(name)
@@ -33,11 +33,11 @@ class ToolRegistry:
             logger.error(message)
             return message
 
-        function = tool.get('function')
+        function = tool.function
 
         try:
             args = json.loads(arguments)
-            validate_tool(args, tool['parameters'])
+            validate_tool(args, tool.parameters)
             return function(**args)
 
         except json.JSONDecodeError as e:
@@ -53,26 +53,22 @@ class ToolRegistry:
         except Exception as e:  # noqa: BLE001
             return f'Tool call failed: {type(e).__name__}: {e}'
 
-    def get_tools(self, tool_names: list[str] | None = None) -> list[Tool]:
-        """Returns available tools.
+    def get_tool(self, name: str) -> Tool:
+        """Returns Tool object with the given name.
 
         Args:
-            tools: name of tools to return
+            name: Name of the tool.
 
         Raises:
-            ToolNotFoundError: if specified tool not found
+            ToolNotFoundError: If the tool is not found.
         """
-        if tool_names is None:
-            return [tool for _, tool in self._tools.items()]
+        tool = self._tools.get(name)
 
-        tools = []
-        for tool in tool_names:
-            if tool in self._tools:
-                tools.append(self._tools[tool])
-            else:
-                raise ToolNotFoundError(name=tool)
+        if tool is None:
+            raise ToolNotFoundError(name=name)
 
-        return tools
+        return tool
 
-
-TOOL_REGISTRY = ToolRegistry(tools=[read_tool, write_tool, edit_tool, shell_tool])
+    def get_tools(self) -> list[str]:
+        """Returns a list of available tool names."""
+        return [tool for tool in self._tools]

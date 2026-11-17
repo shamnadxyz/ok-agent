@@ -1,28 +1,22 @@
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Iterable
+from collections.abc import Generator
 from logging import getLogger
 from typing import Any
 
 from ok_agent.llama_cpp.types import (
-    FinishReason,
-    Function,
+    ChatCompletionChunk,
+    ChatCompletionEvent,
     FunctionTool,
     Message,
-    MessageToolCall,
-    Response,
+    is_error_event,
 )
 from ok_agent.llama_cpp.utils import (
     build_request,
     get_response_error_message,
 )
 from ok_agent.sse import parse_event_stream
-from ok_agent.tools import (
-    ToolDisplayStates,
-)
-from ok_agent.tools.utils import format_tool_call
-from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
 
@@ -34,164 +28,8 @@ class CompletionError(Exception):
 class NoFinishReasonError(Exception):
     """Raised when finish_reason is not found in the response."""
 
-    def __init__(self, message, response: Response):
-        super().__init__(message)
-        self.response = response
 
-
-def _parse_tool_stream(
-    tool_calls: list[MessageToolCall],
-    delta: dict,
-    tool_states: ToolDisplayStates,
-) -> None:
-    for tool_call in delta.get('tool_calls', []):
-        idx = tool_call.get('index')
-        if idx is None:
-            continue
-
-        tool_function = tool_call.get('function', {})
-        function_name = tool_function.get('name')
-        argument = tool_function.get('arguments')
-
-        function_id: str = tool_call.get('id') or tool_calls[idx]['id']
-        tool_type = tool_call.get('type')
-
-        if tool_type is not None and tool_type != 'function':
-            logger.warning(f'Incompatible tool type: {tool_type}')
-            display_text(
-                f'Incompatible tool type: {tool_type}',
-                'ERROR',
-            )
-            continue
-
-        if function_name is not None and function_id is not None:
-            call: Function = {
-                'name': function_name,
-                'arguments': '',
-            }
-
-            function: MessageToolCall = {
-                'id': function_id,
-                'type': tool_type,
-                'function': call,
-            }
-
-            tool_states[function_id] = {
-                'initialized': False,
-                'argument_states': {},
-            }
-
-            tool_calls.insert(idx, function)
-
-        if argument:
-            tool_calls[idx]['function']['arguments'] += argument
-
-            if formatted_text := format_tool_call(
-                tool_call=tool_calls[idx],
-                state=tool_states[function_id],
-            ):
-                display_text(formatted_text, end='')
-
-
-def _handle_stream(stream: Iterable[bytes]) -> Response:
-    """Parses the LLM response and prints it.
-
-    Parses the SSE byte streaming response from the LLM server then prints the
-    reasoning content in gray color and prints the output without color.
-
-    Raises:
-        NoFinishReasonError: if no finish_reason was received
-    """
-    contents: list[str] = []
-    reasoning_contents: list[str] = []
-    tool_calls: list[MessageToolCall] = []
-    finish_reason: FinishReason | None = None
-
-    tool_display_states: ToolDisplayStates = {}
-
-    previously_reasoning = False
-    previously_content = False
-
-    for event in parse_event_stream(stream):
-        try:
-            data = json.loads(event.data)
-        except json.JSONDecodeError:
-            logger.exception('Invalid JSON')
-            continue
-
-        choices = data.get('choices', [])
-
-        if not choices:
-            continue
-
-        choice: dict = choices[0]
-
-        if stop_reason := choice.get('finish_reason'):
-            finish_reason = stop_reason
-
-        delta = choice.get('delta')
-
-        if not delta:
-            continue
-
-        reasoning_content = delta.get('reasoning_content')
-        content = delta.get('content')
-
-        if reasoning_content:
-            if not previously_reasoning:
-                previously_reasoning = True
-
-            display_text(reasoning_content, 'DIM', end='')
-            reasoning_contents.append(reasoning_content)
-        elif previously_reasoning:
-            previously_reasoning = False
-            if not reasoning_contents[-1].endswith('\n'):
-                display_text()
-
-        if content:
-            if not previously_content:
-                previously_content = True
-
-            display_text(content, end='')
-            contents.append(content)
-        elif previously_content:
-            previously_content = False
-            if not contents[-1].endswith('\n'):
-                display_text()
-
-        if 'tool_calls' in delta:
-            _parse_tool_stream(
-                tool_calls=tool_calls,
-                delta=delta,
-                tool_states=tool_display_states,
-            )
-
-    if previously_content and not contents[-1].endswith('\n'):
-        display_text()
-
-    response: Response = {'message': {'role': 'assistant'}}
-
-    if reasoning_contents:
-        response['message']['reasoning_content'] = ''.join(reasoning_contents)
-
-    if contents:
-        content = ''.join(contents)
-        response['message']['content'] = content
-
-    if tool_calls:
-        response['message']['tool_calls'] = tool_calls
-
-    if not finish_reason:
-        raise NoFinishReasonError('No finish reason', response)
-
-    response['finish_reason'] = finish_reason
-
-    logger.debug(response)
-
-    return response
-
-
-def completion(
+def create_chat_completion(
     api_base_url: str,
     api_key: str,
     model: str,
@@ -200,8 +38,8 @@ def completion(
     timeout: int = 300,
     response_format: dict[str, Any] | None = None,
     chat_template_kwargs: dict | None = None,
-) -> Response:
-    """Sends completion request to messages to llama-cpp server.
+) -> Generator[ChatCompletionChunk]:
+    """Create chat completion request to OpenAI compatible endpoint.
 
     Args:
         api_base_url: OpenAI compatible API endpoint.
@@ -217,16 +55,18 @@ def completion(
         Response with AssistantMessage and finish_reason
 
     Raises:
-        CompletionError: If the request fails with an HTTP error or times out.
-        NoFinishReasonError: If no finish_reason was received
+        CompletionError: If the request fails, the stream reports an error, or times out.
         URLError
     """
     payload = {
         'model': model,
         'stream': True,
         'messages': messages,
-        'chat_template_kwargs': chat_template_kwargs,
+        'stream_options': {'include_usage': True},
     }
+
+    if chat_template_kwargs:
+        payload['chat_template_kwargs'] = chat_template_kwargs
 
     if tools:
         payload['tools'] = tools
@@ -241,7 +81,7 @@ def completion(
         allow_nan=False,
     )
 
-    logger.debug(f'data: {data}')
+    logger.debug('data: %s', data)
 
     request = build_request(
         api_base_url=api_base_url,
@@ -251,13 +91,28 @@ def completion(
         method='POST',
     )
     request.add_header('Content-Type', 'application/json')
+    request.add_header('Accept', 'text/event-stream')
 
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return _handle_stream(response)
+        with urllib.request.urlopen(request, timeout=timeout) as stream:
+            for event in parse_event_stream(stream):
+                if event.data.startswith('[DONE]'):
+                    break
+
+                try:
+                    data: ChatCompletionEvent = json.loads(event.data)
+                except json.JSONDecodeError:
+                    logger.exception('Invalid JSON')
+                    continue
+
+                if is_error_event(data):
+                    error = data['error']
+                    raise CompletionError(error.get('message', str(error)))
+
+                yield data
 
     except urllib.error.HTTPError as e:
         error_message = get_response_error_message(e)
-        raise CompletionError(error_message)
+        raise CompletionError(error_message) from e
     except TimeoutError as e:
         raise CompletionError('Completion request timed out') from e

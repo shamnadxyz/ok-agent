@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ok_agent.constants import MAX_OUTPUT_LINES
 from ok_agent.llama_cpp.types import Content
-from ok_agent.tools.types import FormatSpec, Tool
+from ok_agent.tools.types import ArgumentFormat, FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 parameter_schema: JSONSchema = {
@@ -116,17 +116,15 @@ def read_file(
         return f"Type Error '{file.name}' {type(e).__name__} {e}"
 
 
-format_spec: FormatSpec = {
-    'prefix': 'Read ',
-    'arguments': [
-        {'name': 'path'},
-    ],
-}
+format_spec = FormatSpec(
+    prefix='Read ',
+    arguments={'path': ArgumentFormat()},
+)
 
-read_tool: Tool = {
-    'name': 'read',
-    'description': 'Read files. Supported image formats: png, jpeg, and webp.',
-    'parameters': parameter_schema,
-    'function': read_file,
-    'format_spec': format_spec,
-}
+read_tool = Tool(
+    name='read',
+    description='Read files. Supported image formats: png, jpeg, and webp.',
+    parameters=parameter_schema,
+    function=read_file,
+    format_spec=format_spec,
+)

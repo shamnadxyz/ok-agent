@@ -1,15 +1,15 @@
+from ok_agent.tools.display import format_tool_call
 from ok_agent.tools.registry import (
-    TOOL_REGISTRY,
     ToolNotFoundError,
     ToolRegistry,
 )
 from ok_agent.tools.types import Tool, ToolDisplayState, ToolDisplayStates
 
 __all__ = [
-    'TOOL_REGISTRY',
     'Tool',
     'ToolDisplayState',
     'ToolDisplayStates',
     'ToolNotFoundError',
     'ToolRegistry',
+    'format_tool_call',
 ]

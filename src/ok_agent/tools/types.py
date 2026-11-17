@@ -1,65 +1,73 @@
 from collections.abc import Callable
-from typing import NotRequired, TypedDict
+from dataclasses import dataclass
 
 from ok_agent.utils import Style
 from ok_agent.validator import JSONSchema
 
 
-class ArgumentState(TypedDict):
+@dataclass(slots=True)
+class ArgumentState:
     """Argument display state.
 
     Attributes:
         is_complete: If completed printing argument.
         offset: Length of previously displayed argument slice.
+        ends_with_newline: Whether the displayed argument ends with a newline.
     """
 
-    is_complete: bool
-    offset: int
+    is_complete: bool = False
+    initialized: bool = False
+    offset: int = 0
+    ends_with_newline: bool = False
 
 
-class ToolDisplayState(TypedDict):
-    """Tool call display state.
+@dataclass(slots=True)
+class ToolDisplayState:
+    """Tool display state.
 
     Attributes:
-        initialized: If printed initial message.
-        argument_states: Display states of arguments.
+        states: Dictionary of argument states.
+        current_argument: Currently formatting argument name.
     """
 
-    initialized: bool
     argument_states: dict[str, ArgumentState]
+    current_argument: str | None = None
+    initialized: bool = False
 
 
-type ToolDisplayStates = dict[str, ToolDisplayState]
+type ToolDisplayStates = dict[int, ToolDisplayState]
 
 
-class ArgumentFormat(TypedDict):
-    """Specification for the display format of the tool call arguments.
+@dataclass(frozen=True)
+class ArgumentFormat:
+    """Specification for the display format of a tool call argument.
 
     Attributes:
-        name: Argument field name.
         style: Style to use for formatting.
-        ensure_newline: Ensure newline is printed at the end of the argument.
+        ensure_newline: Whether to print a newline after the end of the argument.
     """
 
-    name: str
-    style: NotRequired[Style]
-    ensure_newline: NotRequired[bool]
+    style: Style | None = None
+    prefix: str | None = None
+    ensure_newline: bool = True
 
 
-class FormatSpec(TypedDict):
+@dataclass(frozen=True, slots=True)
+class FormatSpec:
     """Specification for the display format of the tool call.
 
     Attributes:
         prefix: Initial text to print.
-        arguments: List of argument format specifications.
+        arguments: Dictionary of argument format specifications.
     """
 
     prefix: str
-    arguments: list[ArgumentFormat]
+    arguments: dict[str, ArgumentFormat]
 
 
-class Tool(TypedDict):
-    """Agent Tool.
+@dataclass(frozen=True, slots=True)
+class Tool:
+    """Tool specification.
 
     Attributes:
         name: Tool name.
@@ -70,7 +78,7 @@ class Tool(TypedDict):
     """
 
     name: str
-    description: NotRequired[str]
     parameters: JSONSchema
     function: Callable
-    format_spec: NotRequired[FormatSpec]
+    format_spec: FormatSpec
+    description: str | None = None

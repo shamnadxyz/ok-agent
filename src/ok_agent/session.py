@@ -10,6 +10,7 @@ from typing import Literal, TypedDict
 from ok_agent.db import get_db_connection
 from ok_agent.llama_cpp.types import Message
 from ok_agent.skills import SkillMetadata
+from ok_agent.tools import ToolRegistry
 from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
@@ -24,6 +25,7 @@ class Session:
     model: str | None
     models: list[str] | None
     skills: list[SkillMetadata]
+    tool_registry: ToolRegistry
     initial_query: str | None = None
     is_resume: bool = False
 

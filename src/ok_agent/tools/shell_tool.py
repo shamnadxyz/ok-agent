@@ -3,7 +3,7 @@ from logging import getLogger
 
 from ok_agent.constants import MAX_OUTPUT_LINES
 from ok_agent.temporary import temporary
-from ok_agent.tools.types import FormatSpec, Tool
+from ok_agent.tools.types import ArgumentFormat, FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -120,17 +120,15 @@ def execute_shell_command(command: str, timeout: int = 10) -> str:
         return f'Value Error {command}: {type(e).__name__} {e}'
 
 
-format_spec: FormatSpec = {
-    'prefix': '$ ',
-    'arguments': [
-        {'name': 'command'},
-    ],
-}
+format_spec = FormatSpec(
+    prefix='$ ',
+    arguments={'command': ArgumentFormat()},
+)
 
-shell_tool: Tool = {
-    'name': 'shell',
-    'description': 'Execute shell command.',
-    'parameters': parameter_schema,
-    'function': execute_shell_command,
-    'format_spec': format_spec,
-}
+shell_tool = Tool(
+    name='shell',
+    description='Execute shell command.',
+    parameters=parameter_schema,
+    function=execute_shell_command,
+    format_spec=format_spec,
+)

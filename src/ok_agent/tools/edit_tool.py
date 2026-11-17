@@ -1,7 +1,7 @@
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.tools.types import FormatSpec, Tool
+from ok_agent.tools.types import ArgumentFormat, FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -58,19 +58,19 @@ def edit_file(path: str, old_string: str, new_string: str) -> str:
         return f'Type Error: {type(e).__name__}: {e}'
 
 
-format_spec: FormatSpec = {
-    'prefix': 'Edit ',
-    'arguments': [
-        {'name': 'path'},
-        {'name': 'old_string', 'style': 'ERROR'},
-        {'name': 'new_string', 'style': 'OK'},
-    ],
-}
+format_spec = FormatSpec(
+    prefix='Edit ',
+    arguments={
+        'path': ArgumentFormat(),
+        'old_string': ArgumentFormat(style='ERROR'),
+        'new_string': ArgumentFormat(style='OK'),
+    },
+)
 
 
-edit_tool: Tool = {
-    'name': 'edit',
-    'parameters': parameter_schema,
-    'function': edit_file,
-    'format_spec': format_spec,
-}
+edit_tool = Tool(
+    name='edit',
+    parameters=parameter_schema,
+    function=edit_file,
+    format_spec=format_spec,
+)

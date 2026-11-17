@@ -24,11 +24,15 @@ from ok_agent.session import (
 from ok_agent.skills import get_skills
 from ok_agent.temporary import temporary
 from ok_agent.tools import (
-    TOOL_REGISTRY,
+    ToolDisplayState,
     ToolNotFoundError,
     ToolRegistry,
+    format_tool_call,
 )
-from ok_agent.tools.utils import format_tool_call
+from ok_agent.tools.edit_tool import edit_tool
+from ok_agent.tools.read_tool import read_tool
+from ok_agent.tools.shell_tool import shell_tool
+from ok_agent.tools.write_tool import write_tool
 from ok_agent.utils import display_text
 
 logger = logging.getLogger(__name__)
@@ -76,7 +80,11 @@ def read_history_file(path: Path) -> list[Message]:
         raise HistoryReadError(str(e)) from e
 
 
-def replay_history(messages: list[Message], config: Config):
+def replay_history(
+    messages: list[Message],
+    tool_registry: ToolRegistry,
+    config: Config,
+):
     tool_call_map: dict[str, MessageToolCall] = {}
 
     for message in messages:
@@ -102,15 +110,14 @@ def replay_history(messages: list[Message], config: Config):
                 tool_call = tool_call_map[tool_id]
                 content = message['content']
 
-                formatted_text = format_tool_call(
+                if formatted_text := format_tool_call(
+                    argument_chunk=tool_call['function']['arguments'],
                     tool_call=tool_call,
-                    state={'initialized': False, 'argument_states': {}},
-                )
+                    state=ToolDisplayState({}),
+                    tool_registry=tool_registry,
+                ):
+                    display_text(formatted_text, end='')
 
-                if formatted_text is None:
-                    continue
-
-                display_text(formatted_text, end='')
                 if config.show_tool_result:
                     if isinstance(content, str):
                         display_text(content)
@@ -135,37 +142,7 @@ def replay_history(messages: list[Message], config: Config):
                         tool_call_map[tool['id']] = tool
 
 
-def app():
-    global TOOL_REGISTRY
-    try:
-        config = get_config()
-    except ConfigError as e:
-        display_text(f'{e.path}: {e}', 'ERROR')
-        raise SystemExit(1)
-
-    setup_logging(
-        directory=config.log_directory,
-        filename=config.log_filename,
-        max_bytes=config.log_max_bytes,
-        backup_count=config.log_backup_count,
-        log_level=config.log_level,
-    )
-
-    if config.log_disable:
-        logging.disable(logging.CRITICAL)
-
-    skills = get_skills()
-
-    session = Session(
-        history_path=get_session_history_file(),
-        project_path=Path.cwd(),
-        created_at=datetime.now(UTC),
-        model=config.model,
-        models=None,
-        skills=skills,
-        messages=[],
-    )
-
+def parse_args(config: Config) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='ok-agent', description='A minimal coding agent'
     )
@@ -212,7 +189,48 @@ def app():
         choices=['all', 'cwd'],
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def app():
+    try:
+        config = get_config()
+    except ConfigError as e:
+        display_text(f'{e.path}: {e}', 'ERROR')
+        raise SystemExit(1)
+
+    setup_logging(
+        directory=config.log_directory,
+        filename=config.log_filename,
+        max_bytes=config.log_max_bytes,
+        backup_count=config.log_backup_count,
+        log_level=config.log_level,
+    )
+
+    tool_registry = ToolRegistry(
+        [
+            read_tool,
+            write_tool,
+            edit_tool,
+            shell_tool,
+        ]
+    )
+
+    session = Session(
+        history_path=get_session_history_file(),
+        project_path=Path.cwd(),
+        created_at=datetime.now(UTC),
+        model=config.model,
+        models=None,
+        skills=get_skills(),
+        tool_registry=tool_registry,
+        messages=[],
+    )
+
+    if config.log_disable:
+        logging.disable(logging.CRITICAL)
+
+    args = parse_args(config)
 
     if args.model:
         config.model = args.model
@@ -229,16 +247,16 @@ def app():
     if args.tools:
         tools = [tool.strip() for tool in args.tools.split(',')]
         try:
-            TOOL_REGISTRY = ToolRegistry(TOOL_REGISTRY.get_tools(tools))
+            session.tool_registry = ToolRegistry(
+                [tool_registry.get_tool(tool) for tool in tools]
+            )
         except ToolNotFoundError as e:
-            message = f"tool '{e.name}' not found"
-            logger.error(message)
-            display_text(message, 'ERROR')
+            logger.error(e)
+            display_text(str(e), 'ERROR')
             raise SystemExit(1)
 
     if args.list_tools:
-        for tool in TOOL_REGISTRY.get_tools():
-            display_text(tool['name'])
+        display_text('\n'.join(session.tool_registry.get_tools()))
         return
 
     if args.max_turns is not None:
@@ -246,8 +264,8 @@ def app():
             message = f"Ignoring max_turns: '{args.max_turns}'. max_turns must be a positive number."
             logger.warning(message)
             display_text(message, style='WARNING')
-
-        config.max_turns = args.max_turns
+        else:
+            config.max_turns = args.max_turns
 
     if args.list_history:
         try:
@@ -301,7 +319,7 @@ def app():
 
     if session.is_resume:
         try:
-            replay_history(session.messages, config)
+            replay_history(session.messages, tool_registry, config)
         except HistoryMalformedError as e:
             display_text(str(e), style='ERROR')
             raise SystemExit(1)
@@ -309,7 +327,6 @@ def app():
     atexit.register(temporary.remove_temp_files)
     try:
         run_agent_loop(
-            tool_registry=TOOL_REGISTRY,
             session=session,
             config=config,
         )

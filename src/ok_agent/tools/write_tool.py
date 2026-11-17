@@ -1,7 +1,7 @@
 from logging import getLogger
 from pathlib import Path
 
-from ok_agent.tools.types import FormatSpec, Tool
+from ok_agent.tools.types import ArgumentFormat, FormatSpec, Tool
 from ok_agent.validator import JSONSchema
 
 logger = getLogger(__name__)
@@ -39,18 +39,18 @@ def write_file(path: str, content: str) -> str:
         return f'Type Error: {type(e).__name__} {e}'
 
 
-format_spec: FormatSpec = {
-    'prefix': 'Write ',
-    'arguments': [
-        {'name': 'path'},
-        {'name': 'content'},
-    ],
-}
+format_spec = FormatSpec(
+    prefix='Write ',
+    arguments={
+        'path': ArgumentFormat(),
+        'content': ArgumentFormat(),
+    },
+)
 
-write_tool: Tool = {
-    'name': 'write',
-    'description': 'Write to a file. Parent dirs are created if missing.',
-    'parameters': parameter_schema,
-    'function': write_file,
-    'format_spec': format_spec,
-}
+write_tool = Tool(
+    name='write',
+    description='Write to a file. Parent dirs are created if missing.',
+    parameters=parameter_schema,
+    function=write_file,
+    format_spec=format_spec,
+)

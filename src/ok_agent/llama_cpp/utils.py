@@ -56,7 +56,7 @@ def get_models(api_base_url: str, api_key: str) -> list[str]:
         with urllib.request.urlopen(request, timeout=5) as response:
             data = json.loads(response.read())
 
-            logger.debug(f'models: {data}')
+            logger.debug('models: %s', data)
 
             return [entry['id'] for entry in data['data'] if 'id' in entry]
 

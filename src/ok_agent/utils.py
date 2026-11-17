@@ -62,15 +62,3 @@ def display_text(
 
     sys.stdout.write(text)
     sys.stdout.flush()
-
-
-def clear_lines_above(count: int) -> None:
-    """Clear lines above the current cursor.
-
-    Args:
-        count: number of lines to clear above the cursor.
-    """
-    for _ in range(count):
-        sys.stdout.write('\033[1A')
-        sys.stdout.write('\033[2K')
-    sys.stdout.flush()
