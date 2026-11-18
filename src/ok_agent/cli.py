@@ -1,25 +1,27 @@
 import argparse
 import atexit
-import json
 import logging
 import sqlite3
 import termios
 import textwrap
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 from ok_agent.agent import (
     run_agent_loop,
 )
-from ok_agent.config import Config, ConfigError, get_config, get_state_dir
+from ok_agent.config import Config, ConfigError, get_config
 from ok_agent.llama_cpp.types import Message, MessageToolCall
 from ok_agent.loggers import setup_logging
 from ok_agent.session import (
+    HistoryMalformedError,
+    HistoryReadError,
     Session,
     find_session,
     find_sessions,
     get_previous_session,
+    get_session_history_file,
+    read_history_file,
 )
 from ok_agent.skills import get_skills
 from ok_agent.temporary import temporary
@@ -37,48 +39,6 @@ from ok_agent.tools.write_tool import write_tool
 from ok_agent.utils import content_to_text, display_text
 
 logger = logging.getLogger(__name__)
-
-
-class HistoryError(Exception):
-    """Base class for history errors."""
-
-
-class HistoryReadError(HistoryError):
-    """Raised when fails to read history."""
-
-
-class HistoryMalformedError(HistoryError):
-    """Raised when the message history is malformed."""
-
-
-def get_session_history_file() -> Path:
-    """Returns a new session history file."""
-    agent_dir = get_state_dir() / 'history'
-    agent_dir.mkdir(exist_ok=True)
-    time_ns = time.time_ns()
-    date = datetime.now(UTC).strftime('%Y-%m-%d-%H-%M')
-    filepath = agent_dir / f'{date} {time_ns}.jsonl'
-    return filepath
-
-
-def read_history_file(path: Path) -> list[Message]:
-    """Returns message history from history file.
-
-    Args:
-        path: Path of the history file.
-    Raises:
-        HistoryReadError: if failed to read or parse history file.
-    """
-    messages: list[Message] = []
-    try:
-        with open(path) as f:
-            for line in f:
-                messages.append(json.loads(line.strip()))
-            return messages
-    except OSError as e:
-        raise HistoryReadError(str(e)) from e
-    except json.JSONDecodeError as e:
-        raise HistoryReadError(str(e)) from e
 
 
 def replay_history(
@@ -126,7 +86,7 @@ def replay_history(
                         tool_call_map[tool['id']] = tool
 
 
-def parse_args(config: Config) -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='ok-agent', description='A minimal coding agent'
     )
@@ -149,7 +109,7 @@ def parse_args(config: Config) -> argparse.Namespace:
     parser.add_argument(
         '-t',
         '--max-turns',
-        help=f'Maximum number of turns for the agent (default: {config.max_turns})',
+        help='Maximum number of agent turns',
         type=int,
     )
 
@@ -176,7 +136,31 @@ def parse_args(config: Config) -> argparse.Namespace:
     return parser.parse_args()
 
 
+def apply_cli_overrides(config: Config, args: argparse.Namespace) -> None:
+    if args.model is not None:
+        config.model = args.model
+
+    if args.api_base_url is not None:
+        config.api_base_url = args.api_base_url
+
+    if args.api_key is not None:
+        config.api_key = args.api_key
+
+    if args.preserve_reasoning:
+        config.preserve_reasoning = args.preserve_reasoning
+
+    if args.max_turns is not None:
+        if args.max_turns <= 0:
+            message = f"Ignoring max_turns: '{args.max_turns}'. max_turns must be a positive number."
+            logger.warning(message)
+            display_text(message, style='WARNING')
+        else:
+            config.max_turns = args.max_turns
+
+
 def app():
+    args = parse_args()
+
     try:
         config = get_config()
     except ConfigError as e:
@@ -191,6 +175,11 @@ def app():
         log_level=config.log_level,
     )
 
+    if config.log_disable:
+        logging.disable(logging.CRITICAL)
+
+    apply_cli_overrides(config, args)
+
     tool_registry = ToolRegistry(
         [
             read_tool,
@@ -200,38 +189,10 @@ def app():
         ]
     )
 
-    session = Session(
-        history_path=get_session_history_file(),
-        project_path=Path.cwd(),
-        created_at=datetime.now(UTC),
-        model=config.model,
-        models=None,
-        skills=get_skills(),
-        tool_registry=tool_registry,
-        messages=[],
-    )
-
-    if config.log_disable:
-        logging.disable(logging.CRITICAL)
-
-    args = parse_args(config)
-
-    if args.model:
-        session.model = args.model
-
-    if args.api_base_url:
-        config.api_base_url = args.api_base_url
-
-    if args.api_key:
-        config.api_key = args.api_key
-
-    if args.preserve_reasoning:
-        config.preserve_reasoning = args.preserve_reasoning
-
     if args.tools:
         tools = [tool.strip() for tool in args.tools.split(',')]
         try:
-            session.tool_registry = ToolRegistry(
+            tool_registry = ToolRegistry(
                 [tool_registry.get_tool(tool) for tool in tools]
             )
         except ToolNotFoundError as e:
@@ -240,16 +201,8 @@ def app():
             raise SystemExit(1)
 
     if args.list_tools:
-        display_text('\n'.join(session.tool_registry.get_tools()))
+        display_text('\n'.join(tool_registry.get_tools()))
         return
-
-    if args.max_turns is not None:
-        if args.max_turns <= 0:
-            message = f"Ignoring max_turns: '{args.max_turns}'. max_turns must be a positive number."
-            logger.warning(message)
-            display_text(message, style='WARNING')
-        else:
-            config.max_turns = args.max_turns
 
     if args.list_history:
         try:
@@ -270,8 +223,18 @@ def app():
             display_text(f'{entry["id"]}: {short_prompt}')
         return
 
+    session = Session(
+        history_path=get_session_history_file(),
+        project_path=Path.cwd(),
+        created_at=datetime.now(UTC),
+        model=config.model,
+        models=None,
+        skills=get_skills(),
+        tool_registry=tool_registry,
+        messages=[],
+    )
+
     if args.resume is not None:
-        session.is_resume = True
         try:
             if args.resume == -1:
                 prev_session = get_previous_session()
@@ -290,13 +253,15 @@ def app():
 
         try:
             session.messages = read_history_file(history_file)
-            session.history_path = history_file
         except HistoryReadError as e:
             logger.exception('Failed to read history')
             display_text(str(e), style='ERROR')
             raise SystemExit(1)
-        prev_model = prev_session.get('model')
-        if prev_model:
+
+        session.history_path = history_file
+        session.is_resume = True
+
+        if args.model is None and (prev_model := prev_session.get('model')):
             session.model = prev_model
 
     display_text('Ok Agent', bold=True)

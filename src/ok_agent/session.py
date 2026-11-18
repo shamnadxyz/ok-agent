@@ -1,12 +1,14 @@
 import json
 import sqlite3
+import time
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from logging import getLogger
 from pathlib import Path
 from typing import Literal, TypedDict
 
+from ok_agent.config import get_state_dir
 from ok_agent.db import get_db_connection
 from ok_agent.llama_cpp.types import Message
 from ok_agent.skills import SkillMetadata
@@ -37,6 +39,48 @@ class SessionMetadata(TypedDict):
     created_at: str
     model: str | None
     initial_query: str
+
+
+class HistoryError(Exception):
+    """Base class for history errors."""
+
+
+class HistoryReadError(HistoryError):
+    """Raised when fails to read history."""
+
+
+class HistoryMalformedError(HistoryError):
+    """Raised when the message history is malformed."""
+
+
+def get_session_history_file() -> Path:
+    """Returns a new session history file."""
+    agent_dir = get_state_dir() / 'history'
+    agent_dir.mkdir(exist_ok=True)
+    time_ns = time.time_ns()
+    date = datetime.now(UTC).strftime('%Y-%m-%d-%H-%M')
+    filepath = agent_dir / f'{date} {time_ns}.jsonl'
+    return filepath
+
+
+def read_history_file(path: Path) -> list[Message]:
+    """Returns message history from history file.
+
+    Args:
+        path: Path of the history file.
+    Raises:
+        HistoryReadError: if failed to read or parse history file.
+    """
+    messages: list[Message] = []
+    try:
+        with open(path) as f:
+            for line in f:
+                messages.append(json.loads(line.strip()))
+            return messages
+    except OSError as e:
+        raise HistoryReadError(str(e)) from e
+    except json.JSONDecodeError as e:
+        raise HistoryReadError(str(e)) from e
 
 
 def _save_session(session: Session) -> None:
