@@ -29,11 +29,12 @@ from ok_agent.tools import (
     ToolRegistry,
     format_tool_call,
 )
+from ok_agent.tools.display import display_tool_result
 from ok_agent.tools.edit_tool import edit_tool
 from ok_agent.tools.read_tool import read_tool
 from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.write_tool import write_tool
-from ok_agent.utils import display_text
+from ok_agent.utils import content_to_text, display_text
 
 logger = logging.getLogger(__name__)
 
@@ -90,15 +91,9 @@ def replay_history(
     for message in messages:
         match message['role']:
             case 'user':
-                content = message['content']
-                if isinstance(content, str):
-                    display_text(f'{config.prompt}', 'SPECIAL', end='')
-                    display_text(content)
-                elif isinstance(content, list):
-                    display_text(f'{config.prompt}', 'SPECIAL', end='')
-                    for part in content:
-                        if part['type'] == 'text':
-                            display_text(part['text'], end='')
+                text = content_to_text(message['content'])
+                display_text(f'{config.prompt}', 'SPECIAL', end='')
+                display_text(text)
 
             case 'tool':
                 tool_id = message['tool_call_id']
@@ -108,8 +103,6 @@ def replay_history(
                     )
 
                 tool_call = tool_call_map[tool_id]
-                content = message['content']
-
                 if formatted_text := format_tool_call(
                     argument_chunk=tool_call['function']['arguments'],
                     tool_call=tool_call,
@@ -119,26 +112,17 @@ def replay_history(
                     display_text(formatted_text, end='')
 
                 if config.show_tool_result:
-                    if isinstance(content, str):
-                        display_text(content)
-                    elif isinstance(content, list):
-                        for part in content:
-                            if part['type'] == 'text':
-                                display_text(part['text'])
+                    display_tool_result([message])
 
             case 'assistant':
-                reasoning = message.get('reasoning_content')
-                content = message.get('content')
-                tool_calls: list = message.get('tool_calls', [])
+                if 'reasoning_content' in message:
+                    display_text(message['reasoning_content'], style='DIM')
 
-                if reasoning:
-                    display_text(reasoning, style='DIM')
+                if 'content' in message:
+                    display_text(message['content'])
 
-                if isinstance(content, str):
-                    display_text(content)
-
-                if tool_calls:
-                    for tool in tool_calls:
+                if 'tool_calls' in message:
+                    for tool in message['tool_calls']:
                         tool_call_map[tool['id']] = tool
 
 

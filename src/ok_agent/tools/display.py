@@ -1,6 +1,6 @@
 import json
 
-from ok_agent.llama_cpp.types import MessageToolCall, MessageToolCallChunk
+from ok_agent.llama_cpp.types import MessageToolCall, MessageToolCallChunk, ToolMessage
 from ok_agent.tools.registry import ToolNotFoundError, ToolRegistry
 from ok_agent.tools.types import (
     ArgumentFormat,
@@ -9,7 +9,7 @@ from ok_agent.tools.types import (
     ToolDisplayState,
 )
 from ok_agent.tools.utils import rescue_partial_json
-from ok_agent.utils import format_text
+from ok_agent.utils import content_to_text, display_text, format_text
 
 
 def format_tool_call(
@@ -135,3 +135,13 @@ def _format_tool_call(
         return ''.join(text_parts)
 
     return None
+
+
+def display_tool_result(tool_results: list[ToolMessage]):
+    show_id = len(tool_results) > 1
+    for tool_result in tool_results:
+        if show_id:
+            display_text(f'[{tool_result["tool_call_id"]}]')
+
+        text = content_to_text(tool_result['content'])
+        display_text(text)

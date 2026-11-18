@@ -11,6 +11,7 @@ from ok_agent.ansi_sequences import (
     BRIGHT_YELLOW,
     RESET,
 )
+from ok_agent.llama_cpp.types import Content
 
 logger = getLogger(__name__)
 
@@ -62,3 +63,10 @@ def display_text(
 
     sys.stdout.write(text)
     sys.stdout.flush()
+
+
+def content_to_text(content: Content) -> str:
+    if isinstance(content, list):
+        return ''.join(part['text'] for part in content if part['type'] == 'text')
+
+    return content

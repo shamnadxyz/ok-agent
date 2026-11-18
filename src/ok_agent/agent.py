@@ -41,6 +41,7 @@ from ok_agent.tools import (
     ToolRegistry,
     format_tool_call,
 )
+from ok_agent.tools.display import display_tool_result
 from ok_agent.utils import display_text
 
 logger = getLogger(__name__)
@@ -506,24 +507,9 @@ def agent(
             message_history.extend(tool_results)
             messages.extend(tool_results)
 
-            show_id = len(tool_results) > 1
 
             if show_tool_result:
-                for tool_result in tool_results:
-                    tool_content = tool_result['content']
-                    if isinstance(tool_content, str):
-                        text_content = tool_content
-                    else:
-                        text_content = ''.join(
-                            content['text']
-                            for content in tool_content
-                            if content['type'] == 'text'
-                        )
-
-                    if show_id:
-                        display_text(f'[{tool_result["tool_call_id"]}]')
-
-                    display_text(text_content)
+                display_tool_result(tool_results)
 
         elif response.finish_reason == 'length':
             raise TokenLimitError(
