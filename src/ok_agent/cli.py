@@ -217,7 +217,7 @@ def app():
     args = parse_args(config)
 
     if args.model:
-        config.model = args.model
+        session.model = args.model
 
     if args.api_base_url:
         config.api_base_url = args.api_base_url
