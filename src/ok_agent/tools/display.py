@@ -1,6 +1,10 @@
 import json
 
-from ok_agent.llama_cpp.types import MessageToolCall, MessageToolCallChunk, ToolMessage
+from ok_agent.llama_cpp.types import (
+    MessageToolCall,
+    MessageToolCallChunk,
+    ToolMessage,
+)
 from ok_agent.tools.registry import ToolNotFoundError, ToolRegistry
 from ok_agent.tools.types import (
     ArgumentFormat,

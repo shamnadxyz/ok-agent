@@ -6,15 +6,14 @@ import termios
 import textwrap
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.error import URLError
 
-from ok_agent.agent import (
-    run_agent_loop,
-)
+from ok_agent.agent import LimitError, NoResponseError, get_system_prompt, run_agent
+from ok_agent.commands import handle_commands
 from ok_agent.config import Config, ConfigError, get_config
-from ok_agent.llama_cpp.types import Message, MessageToolCall
+from ok_agent.llama_cpp.completions import CompletionError
 from ok_agent.loggers import setup_logging
 from ok_agent.session import (
-    HistoryMalformedError,
     HistoryReadError,
     Session,
     find_session,
@@ -22,68 +21,23 @@ from ok_agent.session import (
     get_previous_session,
     get_session_history_file,
     read_history_file,
+    save_history,
 )
 from ok_agent.skills import get_skills
 from ok_agent.temporary import temporary
 from ok_agent.tools import (
-    ToolDisplayState,
     ToolNotFoundError,
     ToolRegistry,
-    format_tool_call,
 )
-from ok_agent.tools.display import display_tool_result
+from ok_agent.tools.display import HistoryMalformedError
 from ok_agent.tools.edit_tool import edit_tool
 from ok_agent.tools.read_tool import read_tool
 from ok_agent.tools.shell_tool import shell_tool
 from ok_agent.tools.write_tool import write_tool
-from ok_agent.utils import content_to_text, display_text
+from ok_agent.tui import disable_input, init_readline, replay_history
+from ok_agent.utils import display_text
 
 logger = logging.getLogger(__name__)
-
-
-def replay_history(
-    messages: list[Message],
-    tool_registry: ToolRegistry,
-    config: Config,
-):
-    tool_call_map: dict[str, MessageToolCall] = {}
-
-    for message in messages:
-        match message['role']:
-            case 'user':
-                text = content_to_text(message['content'])
-                display_text(f'{config.prompt}', 'SPECIAL', end='')
-                display_text(text)
-
-            case 'tool':
-                tool_id = message['tool_call_id']
-                if tool_id not in tool_call_map:
-                    raise HistoryMalformedError(
-                        'Tool call not found for the tool result'
-                    )
-
-                tool_call = tool_call_map[tool_id]
-                if formatted_text := format_tool_call(
-                    argument_chunk=tool_call['function']['arguments'],
-                    tool_call=tool_call,
-                    state=ToolDisplayState({}),
-                    tool_registry=tool_registry,
-                ):
-                    display_text(formatted_text, end='')
-
-                if config.show_tool_result:
-                    display_tool_result([message])
-
-            case 'assistant':
-                if 'reasoning_content' in message:
-                    display_text(message['reasoning_content'], style='DIM')
-
-                if 'content' in message:
-                    display_text(message['content'])
-
-                if 'tool_calls' in message:
-                    for tool in message['tool_calls']:
-                        tool_call_map[tool['id']] = tool
 
 
 def parse_args() -> argparse.Namespace:
@@ -156,6 +110,62 @@ def apply_cli_overrides(config: Config, args: argparse.Namespace) -> None:
             display_text(message, style='WARNING')
         else:
             config.max_turns = args.max_turns
+
+
+def repl(
+    session: Session,
+    config: Config,
+):
+    init_readline(session, config)
+
+    if not session.messages:
+        session.messages.append(get_system_prompt(session.skills))
+
+    atexit.register(save_history, session)
+
+    while True:
+        query = input(config.prompt).strip()
+
+        if query.lower() == 'exit':
+            raise SystemExit()
+
+        if query == '':
+            continue
+
+        if query.startswith('/'):
+            invoke_agent, query = handle_commands(
+                query=query, session=session, config=config
+            )
+            if not invoke_agent:
+                continue
+
+        if session.model is None:
+            display_text('Please select a model with /model command', 'WARNING')
+            continue
+
+        if session.initial_query is None and query is not None:
+            session.initial_query = query
+
+        try:
+            with disable_input():
+                run_agent(
+                    query=query,
+                    api_base_url=config.api_base_url,
+                    api_key=config.api_key,
+                    tool_registry=session.tool_registry,
+                    model=session.model,
+                    message_history=session.messages,
+                    max_turns=config.max_turns,
+                    preserve_reasoning=config.preserve_reasoning,
+                    show_tool_result=config.show_tool_result,
+                )
+
+        except (LimitError, NoResponseError, CompletionError, URLError) as e:
+            logger.error(e)
+            display_text(str(e), 'ERROR')
+        except KeyboardInterrupt:
+            display_text('\nAgent Interrupted')
+            continue
 
 
 def app():
@@ -275,7 +285,7 @@ def app():
 
     atexit.register(temporary.remove_temp_files)
     try:
-        run_agent_loop(
+        repl(
             session=session,
             config=config,
         )

@@ -11,6 +11,7 @@ from typing import Literal, TypedDict
 from ok_agent.config import get_state_dir
 from ok_agent.db import get_db_connection
 from ok_agent.llama_cpp.types import Message
+from ok_agent.llama_cpp.utils import ModelFetchError, get_models
 from ok_agent.skills import SkillMetadata
 from ok_agent.tools import ToolRegistry
 from ok_agent.utils import display_text
@@ -47,10 +48,6 @@ class HistoryError(Exception):
 
 class HistoryReadError(HistoryError):
     """Raised when fails to read history."""
-
-
-class HistoryMalformedError(HistoryError):
-    """Raised when the message history is malformed."""
 
 
 def get_session_history_file() -> Path:
@@ -188,3 +185,22 @@ def get_previous_session() -> SessionMetadata | None:
             (cwd,),
         )
         return cursor.fetchone()
+
+
+def refresh_models(session: Session, api_base_url: str, api_key: str) -> bool:
+    """Update model list in session.
+
+    Fetches currently available models and update the models list in session.
+
+    Returns:
+        True if refresh was success otherwise False.
+    """
+    try:
+        models = get_models(api_base_url, api_key)
+    except ModelFetchError as e:
+        logger.exception('Failed to update models')
+        display_text(str(e), 'ERROR')
+        return False
+
+    session.models = models
+    return True
