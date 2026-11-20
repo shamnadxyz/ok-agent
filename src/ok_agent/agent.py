@@ -121,7 +121,7 @@ def get_system_prompt(skills: list[SkillMetadata]) -> SystemMessage:
     return {'role': 'system', 'content': system_message}
 
 
-def update_models(session: Session, api_base_url: str, api_key: str) -> bool:
+def refresh_models(session: Session, api_base_url: str, api_key: str) -> bool:
     try:
         models = get_models(api_base_url, api_key)
     except ModelFetchError as e:
@@ -134,10 +134,10 @@ def update_models(session: Session, api_base_url: str, api_key: str) -> bool:
 
 
 def init_completions(session: Session, config: Config):
-    commands = ['/model', '/continue', '/fetch-models']
+    commands = ['/model', '/continue', '/refresh-models']
 
     if session.model is None and session.models is None:
-        update_models(session, config.api_base_url, config.api_key)
+        refresh_models(session, config.api_base_url, config.api_key)
 
     if session.skills:
         commands.extend(f'/skill:{skill["name"]}' for skill in session.skills)
@@ -149,7 +149,7 @@ def init_completions(session: Session, config: Config):
 
         if text.startswith('/model'):
             if session.models is None:
-                update_models(session, config.api_base_url, config.api_key)
+                refresh_models(session, config.api_base_url, config.api_key)
 
             if session.models:
                 completions = [f'/model {model}' for model in session.models]
@@ -195,7 +195,7 @@ def init_readline(history_length: int):
 
 
 def handle_model_command(session: Session, query: str, config: Config):
-    if session.models is None and not update_models(
+    if session.models is None and not refresh_models(
         session, config.api_base_url, config.api_key
     ):
         return
@@ -572,9 +572,9 @@ def run_agent_loop(
             handle_model_command(session, query, config)
             continue
 
-        if query.startswith('/fetch-models'):
-            if update_models(session, config.api_base_url, config.api_key):
-                display_text('Updated model list')
+        if query.startswith('/refresh-models'):
+            if refresh_models(session, config.api_base_url, config.api_key):
+                display_text('Refreshed the model list')
             continue
 
         if session.model is None:
